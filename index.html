@@ -1,13 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Canvas</title>
 </head>
+
 <body>
   <canvas id="monkey_trade" style="background-color: rgb(88, 85, 85);"></canvas>
-
-  <script type="module" src="/src/main.ts"></script>
+  <button
+    style="position: fixed; top: 60px; right: 50px; background-color: #000000; width: 200px; height: 50px; color: white; "
+    id="Short">Short</button>
+  <button
+    style="position: fixed; top: 10px; right: 50px; background-color: #000000; width: 200px; height: 50px; color: white; "
+    id="Long">Long</button>
+  <div
+    style="position: fixed; top: 120px; right: 50px; background-color: #000000; width: 200px; height: 50px; color: white; justify-content: center; align-items: center; display: flex;"
+    id="currentPrice"></div>
+  <script type="module" src="/src/index.ts"></script>
 </body>
+
 </html>

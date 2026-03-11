@@ -1,6 +1,6 @@
 type OrderType = "Buy" | "Sell";
 
-class Order {
+export class Order {
   OrderType: OrderType;
   ShareName: string;
   Quantity: number;
@@ -22,7 +22,7 @@ class Order {
   }
 }
 
-class Node {
+export class Node {
   Order: Order;
   Next: Node | null;
   constructor(Order: Order) {
@@ -31,7 +31,7 @@ class Node {
   }
 }
 
-class LinkedList {
+export class LinkedList {
   head: Node | null;
   constructor() {
     this.head = null;
@@ -65,7 +65,7 @@ class LinkedList {
   }
 }
 
-class Orders_Map {
+export class Orders_Map {
   priceMap: Map<number, LinkedList>;
 
   constructor() {
@@ -96,7 +96,7 @@ class Orders_Map {
   }
 }
 
-class maxHeap {
+export class maxHeap {
   priceHeap: number[];
   All_BuyOrders_Map: Orders_Map;
   size = 0;
@@ -201,7 +201,7 @@ class maxHeap {
     // //console.log('swapping', priceHeap[i1],priceHeap[i2]);
   }
 }
-class minHeap {
+export class minHeap {
   priceHeap: number[];
   All_SellOrders_Map: Orders_Map;
   size: number;
@@ -310,14 +310,27 @@ class minHeap {
   }
 }
 
-class OrderBook {
+export class OrderBook {
   SellOrders_Heap: minHeap;
   BuyOrders_Heap: maxHeap;
   Current_Market_SharePrice: number;
-  constructor() {
+  ShareName: string;
+  lastSettleMentPrice: number;
+  index: number;
+  slope: number;
+  lastPrices: number[];
+  averagePrice: number;
+
+  constructor(ShareName: string, Starting_SharePrice: number) {
+    this.ShareName = ShareName;
     this.SellOrders_Heap = new minHeap(); //Least sell price order on top
     this.BuyOrders_Heap = new maxHeap(); //Highest bid on top
-    this.Current_Market_SharePrice = 0; //some number //will change on matchOrder
+    this.Current_Market_SharePrice = Starting_SharePrice; //some number //will change on matchOrder
+    this.lastSettleMentPrice = Starting_SharePrice;
+    this.index = 0;
+    this.slope = 0;
+    this.lastPrices = [];
+    this.averagePrice = 0;
   }
 
   place_Order(
@@ -326,6 +339,7 @@ class OrderBook {
     Quantity: number,
     ShareName: string,
   ) {
+    if (AtPrice < 0) return;
     const newOrder = new Order(OrderType, ShareName, Quantity, AtPrice);
     //===================================================before Insert
     //======= check if order already satisfies any order in sell minHeap=====
@@ -343,8 +357,10 @@ class OrderBook {
         buyQty -= tradeQty;
         sellQty -= tradeQty;
 
-        console.log("setteling");
+        // console.log("setteling");
+
         //settel the market price here =======
+        this.#calculate_Slope(50);
         this.Current_Market_SharePrice = newOrder.AtPrice;
         //settel the market price here =======
 
@@ -376,9 +392,9 @@ class OrderBook {
         sellQty -= tradeQty;
         buyQty -= tradeQty;
 
-        console.log("setteling");
+        // console.log("setteling");
         //settel the market price here =======
-        this.Current_Market_SharePrice = bestBuy.AtPrice;
+        this.#calculate_Slope(50);
         //settel the market price here =======
 
         if (buyQty === 0) {
@@ -404,87 +420,183 @@ class OrderBook {
     }
   }
 
-  // Check_For_Settle(){
+  #calculate_Slope(Orders_toSee: number) {
+    this.index++;
 
-  // }
-}
+    // Average Price calculation for market correction Trader
+    this.lastPrices.push(this.Current_Market_SharePrice);
+    if (this.lastPrices.length > Orders_toSee) {
+      this.lastPrices.shift();
+      this.averagePrice = this.#sum(this.lastPrices);
+    }
+    this.averagePrice = this.averagePrice / Orders_toSee;
+    // console.log(this.averagePrice);
 
-const FirstOrderBook = new OrderBook();
-FirstOrderBook.Current_Market_SharePrice = 100;
-let currentSeller:number|null = null
-// let lastSeller:number|null = null
-let marketSentiment:number|null=null;
-
-  
-function RandomMaker() {
-  //will make sell offer to current market price in +-1%
-  const currentMKP = FirstOrderBook.Current_Market_SharePrice; //marketprice
-  const tickSize = 14; // Or whatever your base unit is
-  const variation = (Math.random() - 0.5) * (tickSize * 2);
-  const newMKP = Number((currentMKP + variation).toFixed(2));
-  currentSeller = newMKP;
-  console.log(newMKP);
-  const order = FirstOrderBook.place_Order("Sell", newMKP, 1, "bananajs");
-  return order;
-}
-
-function RandomTaker() {
-  //will make sell offer to current market price in +-1%
-  const currentMKP = FirstOrderBook.Current_Market_SharePrice; //marketprice
-  const tickSize = 14; // Or whatever your base unit is
-  if(currentSeller){
-    marketSentiment = currentMKP - currentSeller 
-    console.log(marketSentiment<0?"negative":"positive");
+    //Market price tragetory of =======
+    if (this.index % Orders_toSee === 0) {
+      this.slope = Math.floor(
+        (this.Current_Market_SharePrice - this.lastSettleMentPrice) /
+          Orders_toSee,
+      );
+      this.lastSettleMentPrice = this.Current_Market_SharePrice;
+      this.index = 0;
+    }
   }
 
-  //Introduction of bias...... in random trader as per market sentiments
-  const variation = (Math.random() - ((marketSentiment ?? 0)<0?0.7:0.5)) * (tickSize * 2);
-  const newMKP = Number((currentMKP + variation).toFixed(2));
-  console.log(newMKP);
-  const order = FirstOrderBook.place_Order("Buy", newMKP, 1, "bananajs");
-  return order;
+  #sum(lastPrices: number[]) {
+    let total = 0;
+    for (let i of lastPrices) {
+      total += i;
+    }
+    return total;
+  }
 }
 
-class Traders{
-  constructor(){}
+export class Traders {
+  OrderBook: OrderBook;
+  constructor(OrderBook: OrderBook) {
+    this.OrderBook = OrderBook;
+  }
 
+  //Trader type(Momentum trader- keeps the market momentum) 1... (Random trader place order +-Volitility).....
+  RandomTrader(OrderQuantity: number) {
+    if (OrderQuantity < 0) return;
+    const OrderType: OrderType = Math.random() < 0.7 ? "Sell" : "Buy";
+    const currentMKP = this.OrderBook.Current_Market_SharePrice; //marketprice
+    const volatilityRange = currentMKP * 0.1; // (≈ ±2%)  for now ------------------------------- Need Improvement
+    const bias = 0;
+
+    const random = Math.random() - 0.5 + bias;
+
+    const variation = random * volatilityRange;
+
+    const newPrice = Number((currentMKP + variation).toFixed(2));
+
+    const order = this.OrderBook.place_Order(
+      OrderType,
+      newPrice,
+      OrderQuantity,
+      this.OrderBook.ShareName,
+    );
+    return order;
+  }
+
+  // Trader type(Momentum trader) 2... (TrendFollower, follows slope of last 100 orders, with their quantity matters...)
+  TrendFollower(OrderQuantity: number) {
+    const slope = this.OrderBook.slope;
+    const threshold = 0.05;
+    const probability_of_orderPlacing = 0.6;
+
+    if (slope > threshold && Math.random() < probability_of_orderPlacing) {
+      return this.OrderBook.place_Order(
+        "Buy",
+        this.OrderBook.Current_Market_SharePrice,
+        OrderQuantity,
+        this.OrderBook.ShareName,
+      );
+    }
+
+    if (
+      slope < -threshold &&
+      Math.random() < probability_of_orderPlacing + 0.1
+    ) {
+      return this.OrderBook.place_Order(
+        "Sell",
+        this.OrderBook.Current_Market_SharePrice,
+        OrderQuantity,
+        this.OrderBook.ShareName,
+      );
+    }
+  }
+  //Trader type(Correction Goes opposite to momentum) // sell - if currentprice>avg price else //buy
+  MarketCorrectionTrader(OrderQuantity: number) {
+    //sell
+    if (
+      this.OrderBook.Current_Market_SharePrice >
+      this.OrderBook.averagePrice * 1.01
+    ) {
+      this.OrderBook.place_Order(
+        "Sell",
+        this.OrderBook.Current_Market_SharePrice,
+        OrderQuantity,
+        this.OrderBook.ShareName,
+      );
+    }
+    //Buy
+    if (
+      this.OrderBook.Current_Market_SharePrice <
+      this.OrderBook.averagePrice * 0.99
+    ) {
+      this.OrderBook.place_Order(
+        "Buy",
+        this.OrderBook.Current_Market_SharePrice,
+        OrderQuantity,
+        this.OrderBook.ShareName,
+      );
+    }
+  }
 }
 
-const canvas = document.getElementById(
-  "monkey_trade",
-) as HTMLCanvasElement | null;
+export class Candle {
+  ctx: CanvasRenderingContext2D | null;
+  posX: number;
+  open: number;
+  close: number;
+  high: number;
+  low: number;
+  width: number;
+  scale: number;
 
-if (!canvas) {
-  throw new Error("Canvas not found");
+  constructor(
+    ctx: CanvasRenderingContext2D | null,
+    posX: number,
+    open: number,
+    close: number,
+    high: number,
+    low: number,
+  ) {
+    this.ctx = ctx;
+    this.posX = posX;
+    this.open = open;
+    this.close = close;
+    this.high = high;
+    this.low = low;
+    this.width = 8;
+    this.scale = 1;
+  }
+
+  draw() {
+    console.log(this.posX);
+    if (!this.ctx) return;
+
+    const ctx = this.ctx;
+
+    const openY = -this.open * this.scale;
+    const closeY = -this.close * this.scale;
+    const highY = -this.high * this.scale;
+    const lowY = -this.low * this.scale;
+
+    const color = this.close > this.open ? "green" : "red";
+
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+
+    // wick
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(this.posX, highY);
+    ctx.lineTo(this.posX, lowY);
+    ctx.stroke();
+
+    // body
+    const bodyTop = Math.min(openY, closeY);
+    const bodyHeight = Math.abs(openY - closeY);
+
+    ctx.fillRect(
+      this.posX - this.width / 2,
+      bodyTop,
+      this.width,
+      -bodyHeight || 1,
+    );
+  }
 }
-canvas.width = 2*window.innerWidth;
-canvas.height = 600;
-
-const ctx = canvas.getContext("2d");
-ctx?.translate(canvas.width / 2, canvas.height / 2);
-
-
-const maker = [RandomMaker, RandomTaker];
-
-function randomSelector() {
-  // 60% chance for a Seller (index 0), 40% for a Buyer (index 1)
-  return Math.random() < 0.5 ? maker[0] : maker[1];
-}
-
-let i= -window.innerWidth
-setInterval(() => {
-  const fn = randomSelector();
-  fn();
-  // ctx?.translate(window.innerHeight/2-i,0)
-  // ctx?.save()
-  i++ 
-
-
-  // ctx?.clearRect(0, 0, canvas!.width, canvas!.height);
-
-  const price = FirstOrderBook.Current_Market_SharePrice;
-  ctx?.fillRect(i, 300, 10, -price);
-}, 10);
-
-
-
