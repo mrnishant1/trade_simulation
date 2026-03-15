@@ -7,18 +7,135 @@
   <title>Canvas</title>
 </head>
 
-<body>
-  <canvas id="monkey_trade" style="background-color: rgb(88, 85, 85);"></canvas>
-  <button
-    style="position: fixed; top: 60px; right: 50px; background-color: #000000; width: 200px; height: 50px; color: white; "
-    id="Short">Short</button>
-  <button
-    style="position: fixed; top: 10px; right: 50px; background-color: #000000; width: 200px; height: 50px; color: white; "
-    id="Long">Long</button>
+<body style="background: 
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.03) 0px,
+      rgba(0,0,0,0.03) 1px,
+      transparent 1px,
+      transparent 6px
+    ),
+    #27405f;">
+
+  <!-- Index.css Styling -->
+  <link rel="stylesheet" href="index.css">
+
+  <div class="app">
+    <div class="topbar">
+      <div class="topbar-left">
+        <!-- Platform -->
+        <span class="logo">BananaJs</span>
+        <div class="pair-tab">
+          <!-- Share Name -->
+          <div class="flag" id="ShareName"></div> Banana/USD
+        </div>
+
+      </div>
+
+      <div class="topbar-icons">
+        <div class="icon-btn"><svg viewBox="0 0 16 16">
+            <circle cx="8" cy="8" r="5" />
+            <polyline points="8,5 8,8 10,9" />
+          </svg></div>
+        <div class="icon-btn"><svg viewBox="0 0 16 16">
+            <circle cx="8" cy="8" r="6" />
+            <line x1="8" y1="5" x2="8" y2="8" />
+            <circle cx="8" cy="11" r="0.5" fill="#9098a3" />
+          </svg></div>
+        <div class="icon-btn"><svg viewBox="0 0 16 16">
+            <rect x="2" y="2" width="5" height="5" rx="1" />
+            <rect x="9" y="2" width="5" height="5" rx="1" />
+            <rect x="2" y="9" width="5" height="5" rx="1" />
+            <rect x="9" y="9" width="5" height="5" rx="1" />
+          </svg></div>
+        <div class="icon-btn"><svg viewBox="0 0 16 16">
+            <circle cx="8" cy="5" r="3" />
+            <path d="M2 14 c0-4 12-4 12 0" />
+          </svg></div>
+        <button class="deposit-btn">Deposit</button>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-title">Instruments</span>
+          <div class="sidebar-actions"><span>⋮</span><span>✕</span></div>
+        </div>
+        <div class="search-box">
+          <span class="search-icon">⌕</span>
+          <input type="text" placeholder="Search" />
+        </div>
+        <div class="dropdown-bar">
+          <span>OrderBook:</span> <span>BananaJs ▾</span>
+        </div>
+        <div class="table-header " style="display: flex; justify-content: space-around;">
+          <span>Bid</span>
+          <span>Ask</span>
+        </div>
+        <div class="instruments-table">
+
+        </div>
+      </div>
+
+      <div class="chart-area">
+        <div class="chart-toolbar">
+          <div class="buy-sell">
+            <button id="price-btn">-</button>
+            <button class="sell-btn">Sell —</button>
+            <span class="spread-badge">—</span>
+            <button class="buy-btn">Buy —</button>
+          </div>
+        </div>
+
+        <div class="chart-canvas" style="display: flex;">
+         
+
+          <div style="width: 100%; height: 100%;">
+            <!-- Canvas Chart- Trading candles -->
+            <canvas id="monkey_trade" style="background-color: #141720; height: 100%; width: 100%;"></canvas>
+          </div>
+
+           <div class="price-axis" style="width: 5%; height: 100%; position: relative; padding: 0; display: flex; flex-direction: column; justify-content: space-evenly;">
+            <canvas id="price-axis" style="background-color: #222635; height: 100%; width: 100%; "></canvas>
+          </div>
+        </div>
+
+        <div class="time-axis">
+          <span class="time-tick">0</span>
+          <span class="time-tick">10</span>
+          <span class="time-tick">20</span>
+          <span class="time-tick">30</span>
+          <span class="time-tick">40</span>
+          <span class="time-tick">50</span>
+          <span style="margin-left:auto;font-size:10px;color:#9098a3;">21:49:58 UTC · auto</span>
+        </div>
+
+        <div class="positions-bar">
+          <div class="pos-tab">OPEN <span class="badge">0</span></div>
+          <div class="pos-tab">PENDING <span class="badge">0</span></div>
+          <div class="pos-tab">CLOSED</div>
+          <div style="margin-left:auto;font-size:11px;color:#9098a3;">⤢</div>
+        </div>
+
+        <div class="status-bar">
+          <div class="status-item">Equity: <span class="status-val">0.00 USD</span></div>
+          <div class="status-item">Free Margin: <span class="status-val">0.00 USD</span></div>
+          <div class="status-item">Balance: <span class="status-val">0.00 USD</span></div>
+          <div class="status-item">Margin: <span class="status-val">0.00 USD</span></div>
+          <div class="status-item">Margin level: <span class="status-val">—</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!--
   <div
     style="position: fixed; top: 120px; right: 50px; background-color: #000000; width: 200px; height: 50px; color: white; justify-content: center; align-items: center; display: flex;"
-    id="currentPrice"></div>
-  <script type="module" src="/src/index.ts"></script>
+    id="currentPrice"></div> -->
+  <script type="module" src="/src/index.ts"></script> 
 </body>
 
 </html>

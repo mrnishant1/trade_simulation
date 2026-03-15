@@ -1,111 +1,161 @@
 import { Candle, OrderBook, Traders } from "./main";
-const canvas = document.getElementById(
-  "monkey_trade",
-) as HTMLCanvasElement | null;
 
-if (!canvas) {
-  throw new Error("Canvas not found");
-}
-
-canvas.width = 3 * window.innerWidth;
-canvas.height = 600;
-
+const GlobalHeight = 1.5 * window.innerHeight;
+const GlobalWeight = 1.5 * window.innerWidth;
+const canvas = document.getElementById("monkey_trade") as HTMLCanvasElement;
+if (!canvas) throw new Error("Canvas not found");
+canvas.width = GlobalWeight;
+canvas.height = GlobalHeight;
 const ctx = canvas.getContext("2d");
-ctx?.translate(0, canvas.height);
+if (!ctx) throw new Error("Canvas context missing");
 
+//canvas:2 of================price axis===================
+const priceCanvas = document.getElementById("price-axis") as HTMLCanvasElement;
+const priceContext = priceCanvas.getContext("2d");
+if (!priceCanvas) throw new Error("Canvas not found");
+priceCanvas.width = 200;
+priceCanvas.height = GlobalHeight;
+priceContext!.translate(0, priceCanvas.height);
+priceContext?.scale(1, -1);
+for (let i = 0; i < priceCanvas.height; i += 100) {
+  // Save context state before drawing text
+  priceContext!.save();
+  // Reset transform so text is not inverted
+  priceContext!.setTransform(1, 0, 0, 1, 0, 0);
+  priceContext!.font = "25px Arial";
+  priceContext!.fillStyle = "white";
+  priceContext!.fillText(i.toString(), 100, priceCanvas.height - i);
+  // Restore context state to continue drawing with scale
+  priceContext!.restore();
+
+  priceContext?.fillRect(0, i, priceCanvas.width - 100, 1);
+  priceContext!.fillStyle = "white";
+}
+
+//====================First Order Book=====================
 const Starting_SharePrice = 100;
-const FirstOrderBook = new OrderBook("Bananajs", Starting_SharePrice);
-const trader = new Traders(FirstOrderBook);
+const orderBook = new OrderBook("Bananajs", Starting_SharePrice);
+const trader = new Traders(orderBook);
 
-//Player Experimental
-const playButton = document.getElementById("Short");
-let targetPrice: number | null = null;
-if (playButton !== null) {
-  playButton.onclick = () => {
-    targetPrice = FirstOrderBook.Current_Market_SharePrice - 50;
-    console.log("Order placed");
-  };
-}
-
+//====================Trader Selector======================
 function randomSelector() {
-  function fn(quantity: number) {
-    const traderMethods = [
-      () => trader.RandomTrader(quantity),
-      () => trader.TrendFollower(quantity),
-      () => trader.MarketCorrectionTrader(quantity),
-    ];
-    const selector = traderMethods[0];
-    const selector2 = traderMethods[1];
-    const selector3 = traderMethods[2];
-    selector();
-    selector2();
-    selector3();
-    // const method =
-    //   traderMethods[Math.floor(Math.random() * traderMethods.length)];
+  const quantity = Math.floor(Math.random() * 10);
 
-    // method();
-  }
-
-  return Math.random() < 0.7
-    ? fn(Math.floor(Math.random() * 10))
-    : fn(Math.floor(Math.random() * 10));
+  trader.RandomTrader(quantity);
+  trader.TrendFollower(quantity);
+  trader.MarketCorrectionTrader(quantity);
 }
 
-let i = 0;
-let j = 0;
+let tick = 0;
+let candleX = 0;
 
-const allCandles: Candle[] = [];
-let lastPrice = FirstOrderBook.Current_Market_SharePrice;
-let priceBeforSecond = lastPrice;
+const candles: Candle[] = [];
+let priceBefore = orderBook.Current_Market_SharePrice;
+let cameraOffset = 0;
 
-const intervalId = setInterval(() => {
-  randomSelector();
-  i += 1;
-  const price = FirstOrderBook.Current_Market_SharePrice;
-
-  //Experiment
-  document.getElementById("currentPrice")!.innerText = price.toString();
-  if (price <= targetPrice!) {
-    alert("loose");
-    clearInterval(intervalId);
-  }
+//====================Renderor ============================
+function updateMarket() {
   if (!ctx) return;
+  randomSelector();
+  tick++;
+  const price = orderBook.Current_Market_SharePrice;
+  const btn = document.getElementById("price-btn");
+  btn!.innerText = price.toString();
 
-  //   ctx!.lineWidth = 9;
-  //   ctx!.beginPath();
-  //   ctx!.strokeStyle = price - lastPrice > 0 ? "green" : "red";
-  //   ctx!.moveTo(i, -lastPrice);
-  //   ctx!.lineTo(i, -price);
-  //   ctx!.stroke();
-  //   ctx?.beginPath();
-  //   ctx!.fillStyle = "black";
+  //live price candle------
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx!.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.translate(cameraOffset, canvas.height);
+  ctx.fillStyle = "red";
+  ctx.scale(1, -1);
+  // ctx.fillRect(100, 100, 50, 50);
+  const candle = new Candle(ctx, candleX, priceBefore, price);
+  candle.draw();
 
-  //   //timed candle
-  //   lastPrice = price;
+  // price candle every second
+  if (tick % 10 === 0) {
+    const candle = new Candle(ctx, candleX, priceBefore, price);
+    candles.push(candle);
 
-  ctx!.fillStyle = "black";
-  // Second candle
-  if (i % 10 === 0) {
-    let highY = Math.max(priceBeforSecond, price) - 30;
-    let lowY = Math.min(priceBeforSecond, price) + 30;
-
-    const candle = new Candle(ctx, j, priceBeforSecond, price, highY, lowY);
-    allCandles.push(candle);
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    if (i >= window.innerWidth / 2) {
-      ctx.translate(-10, 0);
+    candleX += 15;
+    priceBefore = price;
+    if (candleX > canvas.width / 2) {
+      cameraOffset -= 15;
     }
-    allCandles.forEach((item) => {
-      item.draw();
-    });
-
-    j += 10;
-    priceBeforSecond = FirstOrderBook.Current_Market_SharePrice;
   }
+}
 
-  if (i > 3 * window.innerWidth) {
-    clearInterval(intervalId);
+function render() {
+  if (!ctx) return;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  // ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.translate(cameraOffset, canvas.height);
+  ctx.scale(1, -1);
+  // candles.forEach((c) => c.draw());
+  for (
+    let i = candles.length >= 100 ? candles.length - 100 : 0;
+    i < candles.length;
+    i++
+  ) {
+    candles[i].draw();
+    // Draw line connecting previous candle's close to current candle's close
+    if (i > 0) {
+      let candle0 = candles[i - 1];
+      let candle = candles[i];
+      ctx.beginPath();
+      ctx.moveTo(candle0.posX, candle0.close + 0);
+      ctx.lineTo(candle.posX, candle.close + 0);
+      ctx.strokeStyle = "blue"; // Color for the close price line
+      ctx.stroke();
+    }
   }
-}, 10);
+}
+
+//====================Drag ================================
+let startX = 0;
+let isMouseDown = false;
+
+window.addEventListener("mousedown", (e) => {
+  isMouseDown = true;
+  startX = e.clientX;
+});
+
+window.addEventListener("mousemove", (e) => {
+  if (!isMouseDown || !ctx) return;
+
+  const dx = e.clientX - startX;
+  const currentOffset = cameraOffset + dx;
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  console.log(currentOffset);
+  ctx.translate(currentOffset, canvas.height);
+  ctx.scale(1, -1);
+
+  for (
+    let i = Math.max(candles.length - 100 - Math.floor(Math.max(dx, 0)), 0);
+    i < candles.length;
+    i++
+  ) {
+    candles[i].draw();
+  }
+});
+
+window.addEventListener("mouseup", (e) => {
+  if (!isMouseDown) return;
+
+  cameraOffset += e.clientX - startX;
+  isMouseDown = false;
+});
+
+function gameLoop() {
+  updateMarket();
+  render();
+
+  if (tick > 3 * window.innerWidth) {
+    clearInterval(loop);
+  }
+}
+
+const loop = setInterval(gameLoop, 10);

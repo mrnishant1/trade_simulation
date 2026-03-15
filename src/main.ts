@@ -346,6 +346,7 @@ export class OrderBook {
     if (newOrder.OrderType === "Buy") {
       let buyQty = newOrder.Quantity;
 
+      //This is process of setteling Only when conditions match-
       while (buyQty > 0 && this.SellOrders_Heap.size > 0) {
         const bestSell = this.SellOrders_Heap.peak()?.Order;
         if (!bestSell) break;
@@ -395,6 +396,7 @@ export class OrderBook {
         // console.log("setteling");
         //settel the market price here =======
         this.#calculate_Slope(50);
+        this.Current_Market_SharePrice = newOrder.AtPrice;
         //settel the market price here =======
 
         if (buyQty === 0) {
@@ -428,15 +430,17 @@ export class OrderBook {
     if (this.lastPrices.length > Orders_toSee) {
       this.lastPrices.shift();
       this.averagePrice = this.#sum(this.lastPrices);
+   
     }
-    this.averagePrice = this.averagePrice / Orders_toSee;
-    // console.log(this.averagePrice);
+    this.averagePrice = Number((this.averagePrice / Orders_toSee).toFixed(3));
 
     //Market price tragetory of =======
     if (this.index % Orders_toSee === 0) {
-      this.slope = Math.floor(
-        (this.Current_Market_SharePrice - this.lastSettleMentPrice) /
-          Orders_toSee,
+      this.slope = Number(
+        (
+          (this.Current_Market_SharePrice - this.lastSettleMentPrice) /
+          Orders_toSee
+        ).toFixed(3),
       );
       this.lastSettleMentPrice = this.Current_Market_SharePrice;
       this.index = 0;
@@ -459,18 +463,20 @@ export class Traders {
   }
 
   //Trader type(Momentum trader- keeps the market momentum) 1... (Random trader place order +-Volitility).....
+  //This Trader's phelosopy- sell at market or more/ Buy at market or less....
   RandomTrader(OrderQuantity: number) {
     if (OrderQuantity < 0) return;
     const OrderType: OrderType = Math.random() < 0.7 ? "Sell" : "Buy";
     const currentMKP = this.OrderBook.Current_Market_SharePrice; //marketprice
-    const volatilityRange = currentMKP * 0.1; // (≈ ±2%)  for now ------------------------------- Need Improvement
-    const bias = 0;
+    const volatilityRange = currentMKP * 0.1; // (≈ ±1%)  for now ------------------------------- Need Improvement
 
-    const random = Math.random() - 0.5 + bias;
 
+    const random = Math.random() - 0.5;
     const variation = random * volatilityRange;
+  
 
     const newPrice = Number((currentMKP + variation).toFixed(2));
+    // console.log("New price",newPrice);
 
     const order = this.OrderBook.place_Order(
       OrderType,
@@ -485,7 +491,7 @@ export class Traders {
   TrendFollower(OrderQuantity: number) {
     const slope = this.OrderBook.slope;
     const threshold = 0.05;
-    const probability_of_orderPlacing = 0.6;
+    const probability_of_orderPlacing = 1;
 
     if (slope > threshold && Math.random() < probability_of_orderPlacing) {
       return this.OrderBook.place_Order(
@@ -494,9 +500,7 @@ export class Traders {
         OrderQuantity,
         this.OrderBook.ShareName,
       );
-    }
-
-    if (
+    } else if (
       slope < -threshold &&
       Math.random() < probability_of_orderPlacing + 0.1
     ) {
@@ -507,6 +511,9 @@ export class Traders {
         this.OrderBook.ShareName,
       );
     }
+    // else{
+    //   console.log("hi slope is between -0.05 to +0.05",slope);
+    // }
   }
   //Trader type(Correction Goes opposite to momentum) // sell - if currentprice>avg price else //buy
   MarketCorrectionTrader(OrderQuantity: number) {
@@ -515,6 +522,7 @@ export class Traders {
       this.OrderBook.Current_Market_SharePrice >
       this.OrderBook.averagePrice * 1.01
     ) {
+      console.log("marketcorrection sold");
       this.OrderBook.place_Order(
         "Sell",
         this.OrderBook.Current_Market_SharePrice,
@@ -523,16 +531,23 @@ export class Traders {
       );
     }
     //Buy
-    if (
+    else if (
       this.OrderBook.Current_Market_SharePrice <
       this.OrderBook.averagePrice * 0.99
     ) {
+      console.log("marketcorrection bought");
       this.OrderBook.place_Order(
         "Buy",
         this.OrderBook.Current_Market_SharePrice,
         OrderQuantity,
         this.OrderBook.ShareName,
       );
+      // } else {
+      //   console.log(
+      //     "hi: market correction",
+      //     this.OrderBook.Current_Market_SharePrice,
+      //     this.OrderBook.averagePrice,
+      //   );
     }
   }
 }
@@ -542,8 +557,7 @@ export class Candle {
   posX: number;
   open: number;
   close: number;
-  high: number;
-  low: number;
+
   width: number;
   scale: number;
 
@@ -552,40 +566,41 @@ export class Candle {
     posX: number,
     open: number,
     close: number,
-    high: number,
-    low: number,
   ) {
     this.ctx = ctx;
     this.posX = posX;
     this.open = open;
     this.close = close;
-    this.high = high;
-    this.low = low;
-    this.width = 8;
+
+    this.width = 12;
     this.scale = 1;
   }
 
   draw() {
-    console.log(this.posX);
+    // console.log(this.close);
+    // console.log(this.posX,"hi");
     if (!this.ctx) return;
 
     const ctx = this.ctx;
 
-    const openY = -this.open * this.scale;
-    const closeY = -this.close * this.scale;
-    const highY = -this.high * this.scale;
-    const lowY = -this.low * this.scale;
+    const openY = this.open * this.scale;
+    const closeY = this.close * this.scale;
 
     const color = this.close > this.open ? "green" : "red";
 
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
 
+    const highY = Math.max(this.open, this.close) - 20;
+    const lowY = Math.min(this.open, this.close) + 20;
+
+    // ctx.scale(1,-1)
+
     // wick
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(this.posX, highY);
-    ctx.lineTo(this.posX, lowY);
+    ctx.moveTo(this.posX, highY * this.scale);
+    ctx.lineTo(this.posX, lowY * this.scale);
     ctx.stroke();
 
     // body
@@ -596,7 +611,7 @@ export class Candle {
       this.posX - this.width / 2,
       bodyTop,
       this.width,
-      -bodyHeight || 1,
+      bodyHeight || 1,
     );
   }
 }
