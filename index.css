@@ -5,6 +5,31 @@
   font-family: var(--font-sans);
 }
 
+.orderbook-table {
+  display: flex;
+  gap: 40px;
+  font-family: Arial, sans-serif;
+}
+
+.side {
+  width: 200px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 14px;
+}
+
+.buy {
+  color: green;
+}
+
+.sell {
+  color: red;
+}
+
 .app {
   display: flex;
   flex-direction: column;

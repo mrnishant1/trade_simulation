@@ -63,25 +63,32 @@
           <div class="sidebar-actions"><span>⋮</span><span>✕</span></div>
         </div>
         <div class="search-box">
-          <span class="search-icon">⌕</span>
-          <input type="text" placeholder="Search" />
+          Market Price: <button id="price-btn">-</button>
         </div>
         <div class="dropdown-bar">
           <span>OrderBook:</span> <span>BananaJs ▾</span>
         </div>
-        <div class="table-header " style="display: flex; justify-content: space-around;">
+        <div class=" " style="display: flex; justify-content: space-around;">
           <span>Bid</span>
           <span>Ask</span>
         </div>
-        <div class="instruments-table">
+        <div class="orderbook-table">
+          <div class="side">
+            <div id="buyOrders"></div>
+          </div>
+
+          <div class="side">
+            <div id="sellOrders"></div>
+          </div>
 
         </div>
       </div>
 
       <div class="chart-area">
+        <input type="range" id="zoom-range" name="percentage-range" min="0" max="100" value="1">
         <div class="chart-toolbar">
           <div class="buy-sell">
-            <button id="price-btn">-</button>
+
             <button class="sell-btn">Sell —</button>
             <span class="spread-badge">—</span>
             <button class="buy-btn">Buy —</button>
@@ -89,14 +96,15 @@
         </div>
 
         <div class="chart-canvas" style="display: flex;">
-         
+
 
           <div style="width: 100%; height: 100%;">
             <!-- Canvas Chart- Trading candles -->
             <canvas id="monkey_trade" style="background-color: #141720; height: 100%; width: 100%;"></canvas>
           </div>
 
-           <div class="price-axis" style="width: 5%; height: 100%; position: relative; padding: 0; display: flex; flex-direction: column; justify-content: space-evenly;">
+          <div class="price-axis"
+            style="width: 5%; height: 100%; position: relative; padding: 0; display: flex; flex-direction: column; justify-content: space-evenly;">
             <canvas id="price-axis" style="background-color: #222635; height: 100%; width: 100%; "></canvas>
           </div>
         </div>
@@ -135,7 +143,7 @@
   <div
     style="position: fixed; top: 120px; right: 50px; background-color: #000000; width: 200px; height: 50px; color: white; justify-content: center; align-items: center; display: flex;"
     id="currentPrice"></div> -->
-  <script type="module" src="/src/index.ts"></script> 
+  <script type="module" src="/src/index.ts"></script>
 </body>
 
 </html>

@@ -1,4 +1,7 @@
+//  (Flaw1.- I should Deduct the share in the first place when place order but for the I'll have to implement the cancelation feature as well for now I'm not doing that just deducting shares only on settlement)
+
 type OrderType = "Buy" | "Sell";
+type TraderType = RandomTrader | TrendFollower | MarketCorrectionTrader;
 
 export class Order {
   OrderType: OrderType;
@@ -7,27 +10,32 @@ export class Order {
   AtPrice: number;
   time: string;
   OrderID: string;
+  Order_PlacedBy: TraderType;
   constructor(
     OrderType: OrderType,
     ShareName: string,
     Quantity: number,
     AtPrice: number,
+    Order_PlacedBy: TraderType,
   ) {
     this.OrderType = OrderType;
     this.ShareName = ShareName;
     this.Quantity = Quantity;
     this.AtPrice = AtPrice;
     this.time = new Date().toLocaleTimeString();
-    this.OrderID = this.time + ShareName + OrderType;
+    this.OrderID = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    this.Order_PlacedBy = Order_PlacedBy;
   }
 }
 
 export class Node {
   Order: Order;
+  ChildrenSize: number; //Number of node appended + itself
   Next: Node | null;
   constructor(Order: Order) {
     this.Order = Order;
     this.Next = null;
+    this.ChildrenSize = 0;
   }
 }
 
@@ -48,18 +56,21 @@ export class LinkedList {
   insert(Order: Order) {
     if (!this.head) {
       this.head = new Node(Order);
+      this.head.ChildrenSize = this.head.Order.Quantity;
     } else {
       let currentNode: Node = this.head;
       while (currentNode.Next != null) {
         currentNode = currentNode.Next;
       }
       currentNode.Next = new Node(Order);
+      this.head.ChildrenSize += this.head.Order.Quantity;
     }
   }
 
   deleteFirst() {
     if (!this.head) return;
     let currentNode: Node = this.head;
+    this.head.ChildrenSize -= this.head.Order.Quantity;
     this.head = this.head.Next;
     return currentNode;
   }
@@ -108,6 +119,7 @@ export class maxHeap {
 
   insert_newOrder(Order: Order) {
     const value = Order.AtPrice;
+    // console.log("value------------", value);
     //Insert the order in Map for fast retrieval of all orders at same price
     //=====IMP=====Insert per price: insertion happen only on unique price not on repeated price
     //on repeated prices just insert into linked list
@@ -116,21 +128,22 @@ export class maxHeap {
     );
 
     this.All_BuyOrders_Map.insert(Order); //Insertion in linked list without question
-    if (!isThereOrderExist) {
+    if (!isThereOrderExist && value !== undefined) {
       this.priceHeap.push(value);
+      // console.log("price heap ", this.priceHeap);
       this.size++;
       let i = this.priceHeap.length - 1;
-      let parent = Math.floor((i + 1) / 2) - 1;
+      let parent = Math.floor((i - 1) / 2);
       if (parent < 0) {
         return;
       }
       let parentValue = this.priceHeap[parent];
-      while (value > parentValue) {
+      while (i > 0 && this.priceHeap[i] > parentValue) {
         //console.log("step12 3",value,parent,parentValue);
 
-        this.#swapElements(this.priceHeap, i + 1, parent);
+        this.#swapElements(this.priceHeap, i, parent);
         i = parent;
-        parent = Math.floor((i + 1) / 2) - 1;
+        parent = Math.floor((i - 1) / 2);
         if (parent < 0) {
           break;
         }
@@ -192,6 +205,9 @@ export class maxHeap {
   }
 
   peak() {
+    // ✅ SAFETY: avoid undefined access
+    if (this.size === 0) return undefined;
+
     const AtPrice: number = this.priceHeap[0];
     return this.All_BuyOrders_Map.priceMap.get(AtPrice)?.head;
   }
@@ -228,7 +244,7 @@ export class minHeap {
       this.priceHeap.push(value);
       this.size++;
       let i = this.priceHeap.length - 1;
-      let parent = Math.floor((i + 1) / 2) - 1;
+      let parent = Math.floor((i - 1) / 2);
       if (parent < 0) {
         return;
       }
@@ -238,7 +254,7 @@ export class minHeap {
 
         this.#swapElements(this.priceHeap, i, parent);
         i = parent;
-        parent = Math.floor((i + 1) / 2) - 1;
+        parent = Math.floor((i - 1) / 2);
         if (parent < 0) {
           break;
         }
@@ -297,6 +313,9 @@ export class minHeap {
     return popped;
   }
   peak() {
+    //  SAFETY: avoid undefined access
+    if (this.size === 0) return undefined;
+
     const AtPrice: number = this.priceHeap[0];
     if (!this.All_SellOrders_Map.priceMap.has(AtPrice)) return;
     else {
@@ -315,22 +334,19 @@ export class OrderBook {
   BuyOrders_Heap: maxHeap;
   Current_Market_SharePrice: number;
   ShareName: string;
-  lastSettleMentPrice: number;
-  index: number;
-  slope: number;
   lastPrices: number[];
   averagePrice: number;
-
+  trendAvg: number;
+  // All_Order_Map: Map<string, TraderType>;
   constructor(ShareName: string, Starting_SharePrice: number) {
     this.ShareName = ShareName;
     this.SellOrders_Heap = new minHeap(); //Least sell price order on top
     this.BuyOrders_Heap = new maxHeap(); //Highest bid on top
     this.Current_Market_SharePrice = Starting_SharePrice; //some number //will change on matchOrder
-    this.lastSettleMentPrice = Starting_SharePrice;
-    this.index = 0;
-    this.slope = 0;
+    this.trendAvg = 0;
     this.lastPrices = [];
     this.averagePrice = 0;
+    // this.All_Order_Map = new Map();
   }
 
   place_Order(
@@ -338,9 +354,16 @@ export class OrderBook {
     AtPrice: number,
     Quantity: number,
     ShareName: string,
+    Order_PlacedBy: TraderType,
   ) {
-    if (AtPrice < 0) return;
-    const newOrder = new Order(OrderType, ShareName, Quantity, AtPrice);
+    if (AtPrice < 0 || Quantity <= 0) return;
+    const newOrder = new Order(
+      OrderType,
+      ShareName,
+      Math.floor(Quantity),
+      Number(AtPrice.toFixed(2)),
+      Order_PlacedBy,
+    );
     //===================================================before Insert
     //======= check if order already satisfies any order in sell minHeap=====
     if (newOrder.OrderType === "Buy") {
@@ -355,14 +378,26 @@ export class OrderBook {
         let sellQty = bestSell.Quantity;
         const tradeQty = Math.min(buyQty, sellQty);
 
+        //Settlement
         buyQty -= tradeQty;
         sellQty -= tradeQty;
+
+        //In here Seller- Gets Money & Deduction of Shares happens now (flaw1 ......)
+        //Buyer- Gets Shares & Deduction of Money= Order.Atprice*tradeQty
+        const settlementMoney = newOrder.AtPrice * tradeQty;
+        const settlementShares = tradeQty;
+        const Buyer = newOrder.Order_PlacedBy;
+        Buyer.cashDeposit -= settlementMoney;
+        Buyer.assetInventory += settlementShares;
+        const Seller = bestSell.Order_PlacedBy;
+        Seller.cashDeposit += settlementMoney;
+        Seller.assetInventory -= settlementShares;
 
         // console.log("setteling");
 
         //settel the market price here =======
-        this.#calculate_Slope(50);
-        this.Current_Market_SharePrice = newOrder.AtPrice;
+        this.#calculate_Avg(50); //Every time price changes I need to calculate the price
+        this.Current_Market_SharePrice = Number(newOrder.AtPrice.toFixed(3));
         //settel the market price here =======
 
         if (sellQty === 0) {
@@ -375,13 +410,14 @@ export class OrderBook {
       if (newOrder.Quantity > 0) {
         this.BuyOrders_Heap.insert_newOrder(newOrder);
       }
-      return this.Current_Market_SharePrice;
+      return newOrder;
     }
 
     if (newOrder.OrderType === "Sell") {
       let sellQty = newOrder.Quantity;
       //console.log("step1");
       while (sellQty > 0 && this.BuyOrders_Heap.size > 0) {
+        // console.log("sold settle");
         const bestBuy = this.BuyOrders_Heap.peak()?.Order;
         if (!bestBuy) break;
         if (newOrder.AtPrice > bestBuy.AtPrice) break;
@@ -393,10 +429,23 @@ export class OrderBook {
         sellQty -= tradeQty;
         buyQty -= tradeQty;
 
+        //In here Seller- Gets Money & Deduction of Shares happens now (flaw1 ......)
+        //Buyer- Gets Shares & Deduction of Money= Order.Atprice*tradeQty
+        const settlementMoney = newOrder.AtPrice * tradeQty;
+        const settlementShares = tradeQty;
+
+        const Seller = newOrder.Order_PlacedBy;
+        Seller.cashDeposit += settlementMoney;
+        Seller.assetInventory -= settlementShares;
+
+        const Buyer = bestBuy.Order_PlacedBy;
+        Buyer.cashDeposit -= settlementMoney;
+        Buyer.assetInventory += settlementShares;
+
         // console.log("setteling");
         //settel the market price here =======
-        this.#calculate_Slope(50);
-        this.Current_Market_SharePrice = newOrder.AtPrice;
+        this.#calculate_Avg(50);
+        this.Current_Market_SharePrice = Number(newOrder.AtPrice.toFixed(3));
         //settel the market price here =======
 
         if (buyQty === 0) {
@@ -418,136 +467,243 @@ export class OrderBook {
         this.SellOrders_Heap.insert_newOrder(newOrder);
       }
 
-      return this.Current_Market_SharePrice;
+      return newOrder;
     }
   }
 
-  #calculate_Slope(Orders_toSee: number) {
-    this.index++;
+  orderBookRecords() {
+    let buyOrderCopy = [...this.BuyOrders_Heap.priceHeap];
+    let sellOrderCopy = [...this.SellOrders_Heap.priceHeap];
 
+    // if (buyOrderCopy.length < 20 || sellOrderCopy.length < 20) {
+    //   return {0,0};
+    // }
+
+    const top20BuyOrders = new Map<number, number>();
+    const top20SellOrders = new Map<number, number>();
+
+    for (let i = 0; i < 20 && buyOrderCopy.length > 0; i++) {
+      const top = this.#deleteMax(buyOrderCopy);
+      if (top) {
+        top20BuyOrders.set(top, this.BuyOrders_Heap.All_BuyOrders_Map.priceMap.get(top)?.head?.ChildrenSize||-1);
+      }
+    }
+
+    for (let i = 0; i < 20 && sellOrderCopy.length > 0; i++) {
+      const top = this.#deleteMin(sellOrderCopy);
+      if (top) {
+        top20SellOrders.set(top, this.SellOrders_Heap.All_SellOrders_Map.priceMap.get(top)?.head?.ChildrenSize||-1);
+      }
+    }
+
+    return { top20BuyOrders, top20SellOrders };
+  }
+
+  #deleteMax(heap: number[]) {
+    if (heap.length === 0) return null;
+    if (heap.length === 1) return heap.pop() as number;
+
+    const top = heap[0];
+    heap[0] = heap.pop() as number;
+
+    let i = 0;
+    const n = heap.length;
+
+    while (true) {
+      let left = 2 * i + 1;
+      let right = 2 * i + 2;
+      let largest = i;
+
+      if (left < n && heap[left] > heap[largest]) largest = left;
+      if (right < n && heap[right] > heap[largest]) largest = right;
+
+      if (largest === i) break;
+      [heap[i], heap[largest]] = [heap[largest], heap[i]];
+      i = largest;
+    }
+
+    return top;
+  }
+  #deleteMin(heap: number[]) {
+    if (heap.length === 0) return null;
+    if (heap.length === 1) return heap.pop() as number;
+
+    const top = heap[0];
+    heap[0] = heap.pop() as number;
+
+    let i = 0;
+    const n = heap.length;
+
+    while (true) {
+      let left = 2 * i + 1;
+      let right = 2 * i + 2;
+      let largest = i;
+
+      if (left < n && heap[left] < heap[largest]) largest = left;
+      if (right < n && heap[right] < heap[largest]) largest = right;
+
+      if (largest === i) break;
+      [heap[i], heap[largest]] = [heap[largest], heap[i]];
+      i = largest;
+    }
+
+    return top;
+  }
+
+  #calculate_Avg(Orders_toSee: number) {
     // Average Price calculation for market correction Trader
     this.lastPrices.push(this.Current_Market_SharePrice);
     if (this.lastPrices.length > Orders_toSee) {
       this.lastPrices.shift();
-      this.averagePrice = this.#sum(this.lastPrices);
-   
+      this.averagePrice = this.#sum(this.lastPrices, Orders_toSee);
+      this.trendAvg = this.#sum(this.lastPrices, Math.floor(Orders_toSee / 4));
     }
     this.averagePrice = Number((this.averagePrice / Orders_toSee).toFixed(3));
-
-    //Market price tragetory of =======
-    if (this.index % Orders_toSee === 0) {
-      this.slope = Number(
-        (
-          (this.Current_Market_SharePrice - this.lastSettleMentPrice) /
-          Orders_toSee
-        ).toFixed(3),
-      );
-      this.lastSettleMentPrice = this.Current_Market_SharePrice;
-      this.index = 0;
-    }
+    this.trendAvg = Number(
+      (this.trendAvg / Math.floor(Orders_toSee / 4)).toFixed(3),
+    );
   }
 
-  #sum(lastPrices: number[]) {
+  #sum(lastPrices: number[], sum_of: number) {
     let total = 0;
-    for (let i of lastPrices) {
-      total += i;
+    for (let i = lastPrices.length - 1; i >= lastPrices.length - sum_of; i--) {
+      total += lastPrices[i];
     }
     return total;
   }
 }
 
-export class Traders {
+export class RandomTrader {
+  assetInventory: number;
+  cashDeposit: number;
   OrderBook: OrderBook;
-  constructor(OrderBook: OrderBook) {
+
+  // OrderQuantity: number;
+  constructor(
+    assetInventory: number,
+    cashDeposit: number,
+    OrderBook: OrderBook,
+  ) {
+    this.assetInventory = assetInventory;
+    this.cashDeposit = cashDeposit;
     this.OrderBook = OrderBook;
+
+    // this.OrderQuantity = 0;
+  }
+  #randn() {
+    let u = 0,
+      v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return (
+      Number(Math.sqrt(-2 * Number(Math.log(u).toFixed(2))).toFixed(2)) *
+      Math.cos(2 * Math.PI * v)
+    );
   }
 
-  //Trader type(Momentum trader- keeps the market momentum) 1... (Random trader place order +-Volitility).....
-  //This Trader's phelosopy- sell at market or more/ Buy at market or less....
-  RandomTrader(OrderQuantity: number) {
+  placeOrder(OrderQuantity: number, TraderInstance: TraderType) {
     if (OrderQuantity < 0) return;
-    const OrderType: OrderType = Math.random() < 0.7 ? "Sell" : "Buy";
+    const OrderType: OrderType = Math.random() < 0.5 ? "Sell" : "Buy";
     const currentMKP = this.OrderBook.Current_Market_SharePrice; //marketprice
-    const volatilityRange = currentMKP * 0.1; // (≈ ±1%)  for now ------------------------------- Need Improvement
-
-
-    const random = Math.random() - 0.5;
-    const variation = random * volatilityRange;
-  
+    const volatilityRange = 0.003; //%
+    let variation = currentMKP * volatilityRange * this.#randn(); //current*0.001 = 0.1% * (-3,+3) = +-0.3%
+    // let variation = currentMKP * volatilityRange * (OrderType==="Sell"?Math.abs(this.#randn()):this.#randn());  //Just in case of panic
+    // console.log("variation", (variation / currentMKP) * 100);
 
     const newPrice = Number((currentMKP + variation).toFixed(2));
-    // console.log("New price",newPrice);
-
+   
     const order = this.OrderBook.place_Order(
       OrderType,
       newPrice,
       OrderQuantity,
       this.OrderBook.ShareName,
+      TraderInstance,
     );
     return order;
   }
+}
 
-  // Trader type(Momentum trader) 2... (TrendFollower, follows slope of last 100 orders, with their quantity matters...)
-  TrendFollower(OrderQuantity: number) {
-    const slope = this.OrderBook.slope;
-    const threshold = 0.05;
-    const probability_of_orderPlacing = 1;
+export class TrendFollower {
+  assetInventory: number;
+  cashDeposit: number;
+  OrderBook: OrderBook;
 
-    if (slope > threshold && Math.random() < probability_of_orderPlacing) {
-      return this.OrderBook.place_Order(
-        "Buy",
-        this.OrderBook.Current_Market_SharePrice,
-        OrderQuantity,
-        this.OrderBook.ShareName,
-      );
-    } else if (
-      slope < -threshold &&
-      Math.random() < probability_of_orderPlacing + 0.1
-    ) {
-      return this.OrderBook.place_Order(
-        "Sell",
-        this.OrderBook.Current_Market_SharePrice,
-        OrderQuantity,
-        this.OrderBook.ShareName,
-      );
-    }
-    // else{
-    //   console.log("hi slope is between -0.05 to +0.05",slope);
-    // }
+  // OrderQuantity: number;
+  constructor(
+    assetInventory: number,
+    cashDeposit: number,
+    OrderBook: OrderBook,
+  ) {
+    this.assetInventory = assetInventory;
+    this.cashDeposit = cashDeposit;
+    this.OrderBook = OrderBook;
+    // this.OrderQuantity = 0;
   }
-  //Trader type(Correction Goes opposite to momentum) // sell - if currentprice>avg price else //buy
-  MarketCorrectionTrader(OrderQuantity: number) {
-    //sell
-    if (
-      this.OrderBook.Current_Market_SharePrice >
-      this.OrderBook.averagePrice * 1.01
-    ) {
-      console.log("marketcorrection sold");
-      this.OrderBook.place_Order(
-        "Sell",
-        this.OrderBook.Current_Market_SharePrice,
-        OrderQuantity,
+  placeOrder(OrderQuantity: number, TraderInstance: TraderType) {
+    const trend = this.OrderBook.trendAvg - this.OrderBook.averagePrice;
+    const threshold = 0.01 * this.OrderBook.averagePrice; //1% of what old 50th order was
+    const strength = trend / threshold;
+    const prob = Math.min(1, Math.abs(strength));
+    if (Math.random() > prob) return;
+
+    const current = this.OrderBook.Current_Market_SharePrice;
+
+    const price =
+      strength > 0
+        ? current * (1 + Math.random() * 0.002)
+        : current * (1 - Math.random() * 0.002);
+
+    return this.OrderBook.place_Order(
+      strength > 0 ? "Buy" : "Sell",
+      price,
+      OrderQuantity * Math.abs(strength),
+      this.OrderBook.ShareName,
+      TraderInstance,
+    );
+  }
+}
+
+export class MarketCorrectionTrader {
+  assetInventory: number;
+  cashDeposit: number;
+  OrderBook: OrderBook;
+  // OrderQuantity: number;
+  constructor(
+    assetInventory: number,
+    cashDeposit: number,
+    OrderBook: OrderBook,
+  ) {
+    this.assetInventory = assetInventory;
+    this.cashDeposit = cashDeposit;
+    this.OrderBook = OrderBook;
+    // this.OrderQuantity = 0;
+  }
+  placeOrder(TraderInstance: TraderType) {
+    const current = this.OrderBook.Current_Market_SharePrice;
+    const avg = this.OrderBook.averagePrice;
+    const threshold = avg * 0.1; //10%
+    if (threshold == 0) return;
+    const deviation = current - avg; //Deviation directly proportional to DUMP/PUMP factor
+    const strength = deviation / threshold; //
+
+    // const probability = 1 - Math.exp(-Math.abs(strength));
+    const probability = 0.6;
+    const baseQty = 10;
+
+    const price =
+      strength > 0
+        ? current * (1 + Math.random() * 0.002)
+        : current * (1 - Math.random() * 0.002);
+    // console.log("price",price);
+    //strenght >0 devitation +ve sell//else buy
+    if (Math.random() < probability) {
+      return this.OrderBook.place_Order(
+        strength > 0 ? "Sell" : "Buy",
+        price,
+        baseQty * Math.abs(strength),
         this.OrderBook.ShareName,
+        TraderInstance,
       );
-    }
-    //Buy
-    else if (
-      this.OrderBook.Current_Market_SharePrice <
-      this.OrderBook.averagePrice * 0.99
-    ) {
-      console.log("marketcorrection bought");
-      this.OrderBook.place_Order(
-        "Buy",
-        this.OrderBook.Current_Market_SharePrice,
-        OrderQuantity,
-        this.OrderBook.ShareName,
-      );
-      // } else {
-      //   console.log(
-      //     "hi: market correction",
-      //     this.OrderBook.Current_Market_SharePrice,
-      //     this.OrderBook.averagePrice,
-      //   );
     }
   }
 }
