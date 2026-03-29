@@ -4,6 +4,7 @@ import {
   RandomTrader,
   TrendFollower,
   MarketCorrectionTrader,
+  MarketMaker,
 } from "./main";
 
 let scale = 1;
@@ -43,12 +44,7 @@ function renderPriceAxis() {
     // Restore context state to continue drawing with scale
     // priceContext!.restore();
 
-    priceContext?.fillRect(
-      0,
-      yPos,
-      priceCanvas.width - 90,
-      1 * scale,
-    );
+    priceContext?.fillRect(0, yPos, priceCanvas.width - 90, 1 * scale);
     priceContext!.fillStyle = "white";
   }
 }
@@ -68,6 +64,7 @@ if (range) {
     priceCanvas.height = GlobalHeight; //canvas 2
     // console.log(GlobalHeight, GlobalWidth);
     renderPriceAxis();
+    render();
   });
 } else {
   console.log("no range");
@@ -76,18 +73,23 @@ if (range) {
 //====================First Order Book=====================
 const Starting_SharePrice = 500;
 const orderBook = new OrderBook("Bananajs", Starting_SharePrice);
-const randomTrader = new RandomTrader(1000, 10000, orderBook);
-const trendFollower = new TrendFollower(1000, 10000, orderBook);
+const randomTrader = new RandomTrader(1000, 100000, orderBook);
+const marketMaker = new MarketMaker(100000, 100000000, orderBook);
+  // marketMaker.placeOrder(1, marketMaker,100000,"Sell");
+
+const trendFollower = new TrendFollower(1000, 100000, orderBook);
 const marketCorrectionTrader = new MarketCorrectionTrader(
   1000,
-  10000,
+  100000,
   orderBook,
 );
+
 //====================Trader Selector======================
 function randomSelector() {
   const quantity = 10;
 
   randomTrader.placeOrder(quantity, randomTrader);
+  // marketMaker.placeOrder(quantity, marketMaker);
   // console.log("shares",randomTrader.assetInventory,randomTrader.cashDeposit);
   trendFollower.placeOrder(quantity, trendFollower);
   marketCorrectionTrader.placeOrder(marketCorrectionTrader);
@@ -191,51 +193,48 @@ function render() {
 }
 
 //====================Drag ================================
-// let startX = 0;
-// let isMouseDown = false;
+let startX = 0;
+let isMouseDown = false;
 
-// window.addEventListener("mousedown", (e) => {
-//   isMouseDown = true;
-//   startX = e.clientX;
-// });
+window.addEventListener("mousedown", (e) => {
+  isMouseDown = true;
+  startX = e.clientX;
+});
 
-// window.addEventListener("mousemove", (e) => {
-//   if (!isMouseDown || !ctx) return;
+window.addEventListener("mousemove", (e) => {
+  if (!isMouseDown || !ctx) return;
 
-//   const dx = e.clientX - startX;
-//   const currentOffset = cameraOffset + dx;
+  const dx = e.clientX - startX;
+  const currentOffset = cameraOffset + dx;
 
-//   ctx.setTransform(1, 0, 0, 1, 0, 0);
-//   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  console.log(currentOffset);
+  ctx.translate(currentOffset, canvas.height);
+  ctx.scale(1, -1);
 
-//   console.log(currentOffset);
-//   ctx.translate(currentOffset, canvas.height);
-//   ctx.scale(1, -1);
-//   // let previousDx = 0
-//   // previousDx = Math.max(previousDx,dx)
+  let select_candles_to_render = Math.max(
+    candles.length - 100 - Math.floor(Math.max(dx, 0)),
+    0,
+  );
 
-//   let select_candles_to_render = Math.max(
-//     candles.length - 100 - Math.floor(Math.max(dx, 0)),
-//     0,
-//   );
+  for (let i = select_candles_to_render; i < candles.length; i++) {
+    candles[i].draw();
+  }
+});
 
-//   for (let i = select_candles_to_render; i < candles.length; i++) {
-//     candles[i].draw();
-//   }
-// });
+window.addEventListener("mouseup", (e) => {
+  if (!isMouseDown) return;
 
-// window.addEventListener("mouseup", (e) => {
-//   if (!isMouseDown) return;
-
-//   cameraOffset += e.clientX - startX;
-//   isMouseDown = false;
-// });
+  cameraOffset += e.clientX - startX;
+  isMouseDown = false;
+});
 
 function gameLoop() {
   updateMarket();
   render();
 
-  if (tick > 3.5 * window.innerWidth) {
+  if (tick > 1.5 * window.innerWidth) {
     clearInterval(loop);
   }
 }

@@ -1,7 +1,11 @@
 //  (Flaw1.- I should Deduct the share in the first place when place order but for the I'll have to implement the cancelation feature as well for now I'm not doing that just deducting shares only on settlement)
 
 type OrderType = "Buy" | "Sell";
-type TraderType = RandomTrader | TrendFollower | MarketCorrectionTrader;
+type TraderType =
+  | RandomTrader
+  | TrendFollower
+  | MarketCorrectionTrader
+  | MarketMaker;
 
 export class Order {
   OrderType: OrderType;
@@ -485,14 +489,22 @@ export class OrderBook {
     for (let i = 0; i < 20 && buyOrderCopy.length > 0; i++) {
       const top = this.#deleteMax(buyOrderCopy);
       if (top) {
-        top20BuyOrders.set(top, this.BuyOrders_Heap.All_BuyOrders_Map.priceMap.get(top)?.head?.ChildrenSize||-1);
+        top20BuyOrders.set(
+          top,
+          this.BuyOrders_Heap.All_BuyOrders_Map.priceMap.get(top)?.head
+            ?.ChildrenSize || -1,
+        );
       }
     }
 
     for (let i = 0; i < 20 && sellOrderCopy.length > 0; i++) {
       const top = this.#deleteMin(sellOrderCopy);
       if (top) {
-        top20SellOrders.set(top, this.SellOrders_Heap.All_SellOrders_Map.priceMap.get(top)?.head?.ChildrenSize||-1);
+        top20SellOrders.set(
+          top,
+          this.SellOrders_Heap.All_SellOrders_Map.priceMap.get(top)?.head
+            ?.ChildrenSize || -1,
+        );
       }
     }
 
@@ -573,6 +585,8 @@ export class OrderBook {
   }
 }
 
+//==============================Traders======================================
+
 export class RandomTrader {
   assetInventory: number;
   cashDeposit: number;
@@ -603,23 +617,47 @@ export class RandomTrader {
 
   placeOrder(OrderQuantity: number, TraderInstance: TraderType) {
     if (OrderQuantity < 0) return;
-    const OrderType: OrderType = Math.random() < 0.5 ? "Sell" : "Buy";
+    let OrderType: OrderType = Math.random() < 0.5 ? "Sell" : "Buy";
+
     const currentMKP = this.OrderBook.Current_Market_SharePrice; //marketprice
     const volatilityRange = 0.003; //%
     let variation = currentMKP * volatilityRange * this.#randn(); //current*0.001 = 0.1% * (-3,+3) = +-0.3%
     // let variation = currentMKP * volatilityRange * (OrderType==="Sell"?Math.abs(this.#randn()):this.#randn());  //Just in case of panic
     // console.log("variation", (variation / currentMKP) * 100);
-
     const newPrice = Number((currentMKP + variation).toFixed(2));
-   
-    const order = this.OrderBook.place_Order(
+    // console.log(OrderType);
+    //Random trader can only trade when--- money>price || shares>0
+    // if (OrderType === "Sell" && this.assetInventory < OrderQuantity) {
+    //   // console.log("Failed1");
+    //   return;
+    // }
+    // if (OrderType === "Buy" && this.cashDeposit < OrderQuantity * newPrice) {
+    //   return;
+    // }
+    // console.log(
+    //   "placing random ",
+    //   OrderType,
+    //   this.assetInventory,
+    //   this.cashDeposit,
+    // );
+    return this.OrderBook.place_Order(
       OrderType,
       newPrice,
       OrderQuantity,
       this.OrderBook.ShareName,
       TraderInstance,
     );
-    return order;
+  }
+
+  #analysisForNextOrder() {
+    //For analysis -factors---
+    //1. assets & money - what order(Buy/sell) can he place according to availabe conditions
+    //2. market sentiment - if can place both, analyse as per both
+    // - if can place only for one(Sell/Buy)- analyse if he should
+    //3.External factor- panic/ news/ policies change etc..
+    //4. Demand & supply
+    // if cash<mkp -> sell-> get cash || if inventory<=0--> Buy
+    // || if inventory<=0 but cash also<mkp due to wrong trades
   }
 }
 
@@ -639,24 +677,40 @@ export class TrendFollower {
     this.OrderBook = OrderBook;
     // this.OrderQuantity = 0;
   }
-  placeOrder(OrderQuantity: number, TraderInstance: TraderType) {
+  placeOrder(baseQty: number, TraderInstance: TraderType) {
     const trend = this.OrderBook.trendAvg - this.OrderBook.averagePrice;
     const threshold = 0.01 * this.OrderBook.averagePrice; //1% of what old 50th order was
     const strength = trend / threshold;
+    let OrderType = strength > 0 ? "Buy" : "Sell";
+
+    const Quantity = baseQty * Math.min(Math.abs(strength), 2);
+
     const prob = Math.min(1, Math.abs(strength));
     if (Math.random() > prob) return;
 
     const current = this.OrderBook.Current_Market_SharePrice;
-
-    const price =
+    let price =
       strength > 0
         ? current * (1 + Math.random() * 0.002)
         : current * (1 - Math.random() * 0.002);
 
+    // Random trader can only trade when--- money>price || shares>0
+    // if (OrderType === "Sell" && this.assetInventory < Quantity) {
+    //   return;
+    // } else if (OrderType === "Buy" && this.cashDeposit < Quantity * price) {
+    //   return;
+    // }
+    // console.log(
+    //   "placing trendfollower ",
+    //   OrderType,
+    //   this.assetInventory,
+    //   this.cashDeposit,
+    // );
+
     return this.OrderBook.place_Order(
-      strength > 0 ? "Buy" : "Sell",
+      OrderType as "Buy" | "Sell",
       price,
-      OrderQuantity * Math.abs(strength),
+      Quantity,
       this.OrderBook.ShareName,
       TraderInstance,
     );
@@ -681,30 +735,89 @@ export class MarketCorrectionTrader {
   placeOrder(TraderInstance: TraderType) {
     const current = this.OrderBook.Current_Market_SharePrice;
     const avg = this.OrderBook.averagePrice;
-    const threshold = avg * 0.1; //10%
+    const threshold = avg * 0.01; //1%
     if (threshold == 0) return;
     const deviation = current - avg; //Deviation directly proportional to DUMP/PUMP factor
     const strength = deviation / threshold; //
+    let OrderType = strength > 0 ? "Sell" : "Buy";
 
     // const probability = 1 - Math.exp(-Math.abs(strength));
     const probability = 0.6;
-    const baseQty = 10;
+    const baseQty = 10 * Math.abs(strength);
 
     const price =
       strength > 0
         ? current * (1 + Math.random() * 0.002)
         : current * (1 - Math.random() * 0.002);
+
+    // //Random trader can only trade when--- money>price || shares>0
+    // if (OrderType === "Sell" && this.assetInventory < baseQty) {
+    //   return;
+    // }
+    // if (OrderType === "Buy" && this.cashDeposit < baseQty * price) {
+    //   return;
+    // }
+
     // console.log("price",price);
     //strenght >0 devitation +ve sell//else buy
     if (Math.random() < probability) {
       return this.OrderBook.place_Order(
-        strength > 0 ? "Sell" : "Buy",
+        OrderType as "Sell" | "Buy",
         price,
-        baseQty * Math.abs(strength),
+        baseQty,
         this.OrderBook.ShareName,
         TraderInstance,
       );
     }
+  }
+}
+
+//Market maker should work when Random trader fails to provide the liquidity
+export class MarketMaker {
+  assetInventory: number;
+  cashDeposit: number;
+  OrderBook: OrderBook;
+
+  constructor(
+    assetInventory: number,
+    cashDeposit: number,
+    OrderBook: OrderBook,
+  ) {
+    this.assetInventory = assetInventory;
+    this.cashDeposit = cashDeposit;
+    this.OrderBook = OrderBook;
+  }
+
+  //Its just to provide Liquidity- Buy offer at just below MKP and sell just above MKP
+  placeOrder(quantity: number, TraderInstance: TraderType) {
+    const current = this.OrderBook.Current_Market_SharePrice;
+    const spread = current * 0.001;
+
+    const buyPrice = current - spread;
+    const sellPrice = current + spread;
+
+    // if (this.assetInventory < quantity) {
+    //   return;
+    // }
+    // if (this.cashDeposit < quantity * buyPrice) {
+    //   return;
+    // }
+
+    // place BOTH sides
+    this.OrderBook.place_Order(
+      "Buy",
+      buyPrice,
+      quantity,
+      this.OrderBook.ShareName,
+      TraderInstance,
+    );
+    this.OrderBook.place_Order(
+      "Sell",
+      sellPrice,
+      quantity,
+      this.OrderBook.ShareName,
+      TraderInstance,
+    );
   }
 }
 
@@ -771,3 +884,6 @@ export class Candle {
     );
   }
 }
+
+//==============================Event System Affecting traders===============
+//Event -> Buy panic/ Sell panic
