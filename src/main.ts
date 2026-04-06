@@ -390,6 +390,7 @@ export class OrderBook {
         //Buyer- Gets Shares & Deduction of Money= Order.Atprice*tradeQty
         const settlementMoney = newOrder.AtPrice * tradeQty;
         const settlementShares = tradeQty;
+
         const Buyer = newOrder.Order_PlacedBy;
         Buyer.cashDeposit -= settlementMoney;
         Buyer.assetInventory += settlementShares;
@@ -511,6 +512,8 @@ export class OrderBook {
     return { top20BuyOrders, top20SellOrders };
   }
 
+  sentimentHandler() {}
+
   #deleteMax(heap: number[]) {
     if (heap.length === 0) return null;
     if (heap.length === 1) return heap.pop() as number;
@@ -585,242 +588,7 @@ export class OrderBook {
   }
 }
 
-//==============================Traders======================================
-
-export class RandomTrader {
-  assetInventory: number;
-  cashDeposit: number;
-  OrderBook: OrderBook;
-
-  // OrderQuantity: number;
-  constructor(
-    assetInventory: number,
-    cashDeposit: number,
-    OrderBook: OrderBook,
-  ) {
-    this.assetInventory = assetInventory;
-    this.cashDeposit = cashDeposit;
-    this.OrderBook = OrderBook;
-
-    // this.OrderQuantity = 0;
-  }
-  #randn() {
-    let u = 0,
-      v = 0;
-    while (u === 0) u = Math.random();
-    while (v === 0) v = Math.random();
-    return (
-      Number(Math.sqrt(-2 * Number(Math.log(u).toFixed(2))).toFixed(2)) *
-      Math.cos(2 * Math.PI * v)
-    );
-  }
-
-  placeOrder(OrderQuantity: number, TraderInstance: TraderType) {
-    if (OrderQuantity < 0) return;
-    let OrderType: OrderType = Math.random() < 0.5 ? "Sell" : "Buy";
-
-    const currentMKP = this.OrderBook.Current_Market_SharePrice; //marketprice
-    const volatilityRange = 0.003; //%
-    let variation = currentMKP * volatilityRange * this.#randn(); //current*0.001 = 0.1% * (-3,+3) = +-0.3%
-    // let variation = currentMKP * volatilityRange * (OrderType==="Sell"?Math.abs(this.#randn()):this.#randn());  //Just in case of panic
-    // console.log("variation", (variation / currentMKP) * 100);
-    const newPrice = Number((currentMKP + variation).toFixed(2));
-    // console.log(OrderType);
-    //Random trader can only trade when--- money>price || shares>0
-    // if (OrderType === "Sell" && this.assetInventory < OrderQuantity) {
-    //   // console.log("Failed1");
-    //   return;
-    // }
-    // if (OrderType === "Buy" && this.cashDeposit < OrderQuantity * newPrice) {
-    //   return;
-    // }
-    // console.log(
-    //   "placing random ",
-    //   OrderType,
-    //   this.assetInventory,
-    //   this.cashDeposit,
-    // );
-    return this.OrderBook.place_Order(
-      OrderType,
-      newPrice,
-      OrderQuantity,
-      this.OrderBook.ShareName,
-      TraderInstance,
-    );
-  }
-
-  #analysisForNextOrder() {
-    //For analysis -factors---
-    //1. assets & money - what order(Buy/sell) can he place according to availabe conditions
-    //2. market sentiment - if can place both, analyse as per both
-    // - if can place only for one(Sell/Buy)- analyse if he should
-    //3.External factor- panic/ news/ policies change etc..
-    //4. Demand & supply
-    // if cash<mkp -> sell-> get cash || if inventory<=0--> Buy
-    // || if inventory<=0 but cash also<mkp due to wrong trades
-  }
-}
-
-export class TrendFollower {
-  assetInventory: number;
-  cashDeposit: number;
-  OrderBook: OrderBook;
-
-  // OrderQuantity: number;
-  constructor(
-    assetInventory: number,
-    cashDeposit: number,
-    OrderBook: OrderBook,
-  ) {
-    this.assetInventory = assetInventory;
-    this.cashDeposit = cashDeposit;
-    this.OrderBook = OrderBook;
-    // this.OrderQuantity = 0;
-  }
-  placeOrder(baseQty: number, TraderInstance: TraderType) {
-    const trend = this.OrderBook.trendAvg - this.OrderBook.averagePrice;
-    const threshold = 0.01 * this.OrderBook.averagePrice; //1% of what old 50th order was
-    const strength = trend / threshold;
-    let OrderType = strength > 0 ? "Buy" : "Sell";
-
-    const Quantity = baseQty * Math.min(Math.abs(strength), 2);
-
-    const prob = Math.min(1, Math.abs(strength));
-    if (Math.random() > prob) return;
-
-    const current = this.OrderBook.Current_Market_SharePrice;
-    let price =
-      strength > 0
-        ? current * (1 + Math.random() * 0.002)
-        : current * (1 - Math.random() * 0.002);
-
-    // Random trader can only trade when--- money>price || shares>0
-    // if (OrderType === "Sell" && this.assetInventory < Quantity) {
-    //   return;
-    // } else if (OrderType === "Buy" && this.cashDeposit < Quantity * price) {
-    //   return;
-    // }
-    // console.log(
-    //   "placing trendfollower ",
-    //   OrderType,
-    //   this.assetInventory,
-    //   this.cashDeposit,
-    // );
-
-    return this.OrderBook.place_Order(
-      OrderType as "Buy" | "Sell",
-      price,
-      Quantity,
-      this.OrderBook.ShareName,
-      TraderInstance,
-    );
-  }
-}
-
-export class MarketCorrectionTrader {
-  assetInventory: number;
-  cashDeposit: number;
-  OrderBook: OrderBook;
-  // OrderQuantity: number;
-  constructor(
-    assetInventory: number,
-    cashDeposit: number,
-    OrderBook: OrderBook,
-  ) {
-    this.assetInventory = assetInventory;
-    this.cashDeposit = cashDeposit;
-    this.OrderBook = OrderBook;
-    // this.OrderQuantity = 0;
-  }
-  placeOrder(TraderInstance: TraderType) {
-    const current = this.OrderBook.Current_Market_SharePrice;
-    const avg = this.OrderBook.averagePrice;
-    const threshold = avg * 0.01; //1%
-    if (threshold == 0) return;
-    const deviation = current - avg; //Deviation directly proportional to DUMP/PUMP factor
-    const strength = deviation / threshold; //
-    let OrderType = strength > 0 ? "Sell" : "Buy";
-
-    // const probability = 1 - Math.exp(-Math.abs(strength));
-    const probability = 0.6;
-    const baseQty = 10 * Math.abs(strength);
-
-    const price =
-      strength > 0
-        ? current * (1 + Math.random() * 0.002)
-        : current * (1 - Math.random() * 0.002);
-
-    // //Random trader can only trade when--- money>price || shares>0
-    // if (OrderType === "Sell" && this.assetInventory < baseQty) {
-    //   return;
-    // }
-    // if (OrderType === "Buy" && this.cashDeposit < baseQty * price) {
-    //   return;
-    // }
-
-    // console.log("price",price);
-    //strenght >0 devitation +ve sell//else buy
-    if (Math.random() < probability) {
-      return this.OrderBook.place_Order(
-        OrderType as "Sell" | "Buy",
-        price,
-        baseQty,
-        this.OrderBook.ShareName,
-        TraderInstance,
-      );
-    }
-  }
-}
-
-//Market maker should work when Random trader fails to provide the liquidity
-export class MarketMaker {
-  assetInventory: number;
-  cashDeposit: number;
-  OrderBook: OrderBook;
-
-  constructor(
-    assetInventory: number,
-    cashDeposit: number,
-    OrderBook: OrderBook,
-  ) {
-    this.assetInventory = assetInventory;
-    this.cashDeposit = cashDeposit;
-    this.OrderBook = OrderBook;
-  }
-
-  //Its just to provide Liquidity- Buy offer at just below MKP and sell just above MKP
-  placeOrder(quantity: number, TraderInstance: TraderType) {
-    const current = this.OrderBook.Current_Market_SharePrice;
-    const spread = current * 0.001;
-
-    const buyPrice = current - spread;
-    const sellPrice = current + spread;
-
-    // if (this.assetInventory < quantity) {
-    //   return;
-    // }
-    // if (this.cashDeposit < quantity * buyPrice) {
-    //   return;
-    // }
-
-    // place BOTH sides
-    this.OrderBook.place_Order(
-      "Buy",
-      buyPrice,
-      quantity,
-      this.OrderBook.ShareName,
-      TraderInstance,
-    );
-    this.OrderBook.place_Order(
-      "Sell",
-      sellPrice,
-      quantity,
-      this.OrderBook.ShareName,
-      TraderInstance,
-    );
-  }
-}
-
+//==============================Candle=========================================
 export class Candle {
   ctx: CanvasRenderingContext2D | null;
   posX: number;
@@ -885,5 +653,353 @@ export class Candle {
   }
 }
 
+//==============================Traders======================================
+
+export class RandomTrader {
+  assetInventory: number;
+  cashDeposit: number;
+  OrderBook: OrderBook;
+
+  // OrderQuantity: number;
+  constructor(
+    assetInventory: number,
+    cashDeposit: number,
+    OrderBook: OrderBook,
+  ) {
+    this.assetInventory = assetInventory;
+    this.cashDeposit = cashDeposit;
+    this.OrderBook = OrderBook;
+
+    // this.OrderQuantity = 0;
+  }
+  #randn() {
+    let u = 0,
+      v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return (
+      Number(Math.sqrt(-2 * Number(Math.log(u).toFixed(2))).toFixed(2)) *
+      Math.cos(2 * Math.PI * v)
+    );
+  }
+
+  placeOrder(
+    OrderQuantity: number,
+    TraderInstance: TraderType,
+    sentiment: number,
+  ) {
+    if (OrderQuantity < 0) return;
+    const currentMKP = this.OrderBook.Current_Market_SharePrice;
+    //deciding knobs---> 1. sentiment-> buyprobability 2. variation 3. volitility range
+    //=============
+
+    const volatilityRange = 0.004;
+    const drift = currentMKP * sentiment * 0.001; // small bias
+    const variation = currentMKP * volatilityRange * this.#randn();
+    const buyProbability = 0.5 + sentiment * 0.45;
+    const newPrice = Number((currentMKP + drift + variation).toFixed(2));
+
+    //=============
+    
+    // const newPrice = Number((currentMKP + variation).toFixed(2));
+    const OrderType: OrderType =
+      Math.random() < buyProbability ? "Buy" : "Sell";
+
+    // console.log(OrderType);
+    //Random trader can only trade when--- money>price || shares>0
+    // if (OrderType === "Sell" && this.assetInventory < OrderQuantity) {
+    //   // console.log("Failed1");
+    //   return;
+    // }
+    // if (OrderType === "Buy" && this.cashDeposit < OrderQuantity * newPrice) {
+    //   return;
+    // }
+    // console.log(
+    //   "placing random ",
+    //   OrderType,
+    //   this.assetInventory,
+    //   this.cashDeposit,
+    // );
+    return this.OrderBook.place_Order(
+      OrderType,
+      newPrice,
+      OrderQuantity,
+      this.OrderBook.ShareName,
+      TraderInstance,
+    );
+  }
+}
+
+export class TrendFollower {
+  assetInventory: number;
+  cashDeposit: number;
+  OrderBook: OrderBook;
+  // OrderQuantity: number;
+  constructor(
+    assetInventory: number,
+    cashDeposit: number,
+    OrderBook: OrderBook,
+  ) {
+    this.assetInventory = assetInventory;
+    this.cashDeposit = cashDeposit;
+    this.OrderBook = OrderBook;
+
+    // this.OrderQuantity = 0;
+  }
+  placeOrder(
+    OrderQuantity: number,
+    TraderInstance: TraderType,
+    sentiment: number,
+  ) {
+    if (OrderQuantity < 0) return;
+    const current = this.OrderBook.Current_Market_SharePrice;
+    const trend = this.OrderBook.trendAvg - this.OrderBook.averagePrice;
+    //deciding knobs---> 1.sentiment 2. threshold 3. volitility range
+    //=======================
+    const threshold = 0.01 * this.OrderBook.averagePrice; //1% of what old 50th order was
+    let strength = trend / threshold ; //strength = trend + news(sentiment)
+    strength *= 1 + sentiment * 0.8;
+    const volatilityRange = 0.002 * (1 + Math.abs(sentiment) * 2);
+    let price =
+    strength > 0
+    ? current * (1 + Math.abs(Math.random()) * volatilityRange)
+    : current * (1 - Math.abs(Math.random()) * volatilityRange);
+    
+    let OrderType = strength > 0 ? "Buy" : "Sell";
+    const Quantity = OrderQuantity * Math.min(Math.abs(strength), 2);
+
+    const prob = Math.min(1, Math.abs(strength));
+    if (Math.random() > prob) return;
+
+    // Random trader can only trade when--- money>price || shares>0
+    // if (OrderType === "Sell" && this.assetInventory < Quantity) {
+    //   return;
+    // } else if (OrderType === "Buy" && this.cashDeposit < Quantity * price) {
+    //   return;
+    // }
+    // console.log(
+    //   "placing trendfollower ",
+    //   OrderType,
+    //   this.assetInventory,
+    //   this.cashDeposit,
+    // );
+
+    return this.OrderBook.place_Order(
+      OrderType as "Buy" | "Sell",
+      price,
+      Quantity,
+      this.OrderBook.ShareName,
+      TraderInstance,
+    );
+  }
+}
+
+export class MarketCorrectionTrader {
+  assetInventory: number;
+  cashDeposit: number;
+  OrderBook: OrderBook;
+  // OrderQuantity: number;
+  constructor(
+    assetInventory: number,
+    cashDeposit: number,
+    OrderBook: OrderBook,
+  ) {
+    this.assetInventory = assetInventory;
+    this.cashDeposit = cashDeposit;
+    this.OrderBook = OrderBook;
+
+    // this.OrderQuantity = 0;
+  }
+  placeOrder(TraderInstance: TraderType, sentiment: number) {
+    const current = this.OrderBook.Current_Market_SharePrice;
+    const avg = this.OrderBook.averagePrice;
+    const threshold = avg * 0.01; //1%
+    if (threshold == 0) return;
+    let strength = (current - avg) / threshold; //
+    //deciding knobs---> 1. sentiment  2. OrderQuantity
+    strength *= 1 + sentiment * 0.8;
+    let OrderType = strength > 0 ? "Sell" : "Buy";
+    const OrderQuantity = 10 * Math.abs(strength);
+
+    // If sentiment agrees with the deviation (hype pushing price up further),
+    // correction trader gets suppressed — market stays irrational longer
+    const sentimentFightingCorrection =
+      (strength > 0 && sentiment > 0.3) || (strength < 0 && sentiment < -0.3);
+
+    const probability = sentimentFightingCorrection
+      ? 0.15 // sentiment is overpowering — correction delayed
+      : 0.6 + Math.min(0.3, Math.abs(strength) * 0.05); // correction more likely
+
+    const variation = 0.002 * (1 + Math.abs(sentiment) * 2);
+    const price =
+      strength > 0
+        ? current * (1 + Math.random() * variation)
+        : current * (1 - Math.random() * variation);
+
+    // //Random trader can only trade when--- money>price || shares>0
+    // if (OrderType === "Sell" && this.assetInventory < OrderQuantity) {
+    //   return;
+    // }
+    // if (OrderType === "Buy" && this.cashDeposit < OrderQuantity * price) {
+    //   return;
+    // }
+
+    // console.log("price",price);
+    //strenght >0 devitation +ve sell//else buy
+    if (Math.random() < probability) {
+      return this.OrderBook.place_Order(
+        OrderType as "Sell" | "Buy",
+        price,
+        OrderQuantity,
+        this.OrderBook.ShareName,
+        TraderInstance,
+      );
+    }
+  }
+}
+
+//Market maker should work when Random trader fails to provide the liquidity
+export class MarketMaker {
+  assetInventory: number;
+  cashDeposit: number;
+  OrderBook: OrderBook;
+
+  constructor(
+    assetInventory: number,
+    cashDeposit: number,
+    OrderBook: OrderBook,
+  ) {
+    this.assetInventory = assetInventory;
+    this.cashDeposit = cashDeposit;
+    this.OrderBook = OrderBook;
+  }
+
+  //Its just to provide Liquidity- Buy offer at just below MKP and sell just above MKP
+  placeOrder(quantity: number, TraderInstance: TraderType, sentiment: number) {
+    const current = this.OrderBook.Current_Market_SharePrice;
+
+    const spreadMultiplier = 1 + Math.abs(sentiment) * 3;
+    const spread = current * 0.001 * spreadMultiplier;
+
+    const buyPrice = current - spread;
+    const sellPrice = current + spread;
+
+    const skewedByFear = sentiment < -0.4;
+    const buyQty = skewedByFear
+      ? Math.max(1, Math.round(quantity * 0.4))
+      : quantity;
+    const sellQty =
+      sentiment > 0.4 ? Math.max(1, Math.round(quantity * 0.4)) : quantity;
+
+    // if (this.assetInventory < quantity) {
+    //   return;
+    // }
+    // if (this.cashDeposit < quantity * buyPrice) {
+    //   return;
+    // }
+
+    // place BOTH sides
+    this.OrderBook.place_Order(
+      "Buy",
+      buyPrice,
+      buyQty,
+      this.OrderBook.ShareName,
+      TraderInstance,
+    );
+    this.OrderBook.place_Order(
+      "Sell",
+      sellPrice,
+      sellQty,
+      this.OrderBook.ShareName,
+      TraderInstance,
+    );
+  }
+}
+
 //==============================Event System Affecting traders===============
-//Event -> Buy panic/ Sell panic
+export class Event {
+  name: string;
+  dreadness: number; // [-1, 1] -1= negative news, 0= neutral, 1=positive news
+  category: eventType;
+  weight_of_occuring: number;
+  // weight should be depend on randomness + cooldown + memory_of_prev event
+  //if event A just occur--> it may affect other weight, tickduration, decayrate, cooldown time
+  tick_duration: number;
+  startTime: number;
+  decayRate: number;
+  affectedTraders: TraderType[] | null;
+  coolDown: number;
+  affectedMarkets: OrderBook[] | null;
+
+  constructor(
+    name: string,
+    dreadness: number,
+    tick_duration: number,
+    decayRate: number,
+    weight_of_occuring: number,
+    category: eventType,
+    coolDown: number,
+    affectedMarket: OrderBook[], // one event can affect multiple markets
+  ) {
+    this.name = name;
+    this.dreadness = dreadness;
+    this.category = category;
+    this.tick_duration = tick_duration;
+    this.decayRate = decayRate;
+    this.startTime = Date.now();
+    this.affectedTraders = null;
+    this.weight_of_occuring = weight_of_occuring;
+    this.coolDown = coolDown;
+    this.affectedMarkets = affectedMarket;
+  }
+
+  update_weight_of_occuring(updation: number) {
+    this.weight_of_occuring += updation;
+  }
+
+  update_coolDown(updation: number) {
+    this.coolDown += updation;
+  }
+
+  isActive() {
+    return Date.now() - this.startTime < this.tick_duration;
+  }
+
+  getInfluence() {
+    const elapsed = Date.now() - this.startTime;
+    return this.dreadness * Math.exp(-this.decayRate * elapsed);
+  }
+}
+export type eventType =
+  | "Bullish"
+  | "Bearish"
+  | "Hype"
+  | "Panic"
+  | "OVERVALUED"
+  | "UNDERVALUED"
+  | "TREND_BOOST"
+  | "TREND_EXHAUSTION";
+
+export class EventSystem {
+  active_Events: Event[] = [];
+
+  addEvent(event: Event) {
+    this.active_Events.push(event);
+  }
+
+  update() {
+    // remove dead active_Events
+    this.active_Events = this.active_Events.filter((e) => e.isActive());
+  }
+
+  getMarketSentiment(): number {
+    let sentiment = 0;
+
+    for (const e of this.active_Events) {
+      sentiment += e.getInfluence();
+    }
+
+    // clamp to [-1, 1]
+    return Math.max(-1, Math.min(1, sentiment));
+  }
+}

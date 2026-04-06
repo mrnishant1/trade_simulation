@@ -89,6 +89,8 @@
         <div class="chart-toolbar">
           <div class="buy-sell">
 
+            <span class="event-btn">Active Event: </span>
+            <span class="spread-badge">—</span>
             <button class="sell-btn">Sell —</button>
             <span class="spread-badge">—</span>
             <button class="buy-btn">Buy —</button>
@@ -137,12 +139,73 @@
     </div>
   </div>
 
+  <!-- <div class="dash" style="    
+    height: 50%;
+    width: 50%;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background: rgb(79, 85, 117);">
+    <div class="top-bar">
+      <h2>Event system monitor</h2>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="clock" style="font-size:12px;color:var(--color-text-secondary);font-family:var(--font-mono);"></span>
+        <span id="status-dot"
+          style="width:8px;height:8px;border-radius:50%;background:#1D9E75;display:inline-block;"></span>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Active events</div>
+        <div class="metric-value" id="m-active">0</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Market sentiment</div>
+        <div class="metric-value" id="m-sentiment">0.00</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Avg dreadness</div>
+        <div class="metric-value" id="m-dread">0.00</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Events fired</div>
+        <div class="metric-value" id="m-fired">0</div>
+      </div>
+    </div>
+
+    <div class="sentiment-bar-wrap">
+      <div class="sentiment-label"><span>Bearish -1</span><span id="sentiment-text"
+          style="font-weight:500;color:var(--color-text-primary);">Neutral</span><span>Bullish +1</span></div>
+      <div class="bar-track">
+        <div class="bar-center"></div>
+        <div class="bar-fill" id="bar-fill"></div>
+      </div>
+    </div>
+
+    <div class="section-label">Active events</div>
+    <div class="events-grid" id="events-grid">
+      <div class="empty-state" style="grid-column:1/-1;">No active events — trigger one below</div>
+    </div>
+
+    <div class="section-label" style="margin-top:1rem;">Controls</div>
+    <div class="controls" style="margin-bottom:1rem;">
+      <button id="btn">Earnings beat</button>
+      <button id="btn">Rate hike</button>
+      <button id="btn">Geopolitical shock</button>
+      <button id="btn">Product launch</button>
+      <button id="btn">Fraud scandal</button>
+      <button id="btn">Macro data</button>
+      <button onclick="fireRandom()">Random event</button>
+      <button onclick="clearAll()" style="color:var(--color-text-danger);">Clear all</button>
+    </div>
+
+    <div class="section-label">Event log</div>
+    <div class="log" id="log"></div>
+  </div> -->
 
 
-  <!--
-  <div
-    style="position: fixed; top: 120px; right: 50px; background-color: #000000; width: 200px; height: 50px; color: white; justify-content: center; align-items: center; display: flex;"
-    id="currentPrice"></div> -->
+
   <script type="module" src="/src/index.ts"></script>
 </body>
 
