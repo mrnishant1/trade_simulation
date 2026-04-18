@@ -8,6 +8,7 @@ import {
   type eventType,
   Event,
   EventSystem,
+  Player,
 } from "./main";
 
 // ============================================================
@@ -80,15 +81,32 @@ zoomRange?.addEventListener("input", () => {
 // Market Entities
 // ============================================================
 
-const orderBook = new OrderBook("Bananajs", STARTING_PRICE);
-const randomTrader = new RandomTrader(1000, 100_000, orderBook);
-const trendFollower = new TrendFollower(1000, 100_000, orderBook);
-const marketCorrectionTrader = new MarketCorrectionTrader(
+const firstOrderBookName = "Bananajs";
+const orderBook = new OrderBook(firstOrderBookName, STARTING_PRICE);
+const All_OrderBook = { [firstOrderBookName]: orderBook };
+
+const randomTrader = new RandomTrader(
+  { [firstOrderBookName]: { asset: orderBook, assetQuntity: 1000 } },
   1000,
-  100_000,
-  orderBook,
+  All_OrderBook,
 );
-const marketMaker = new MarketMaker(100_000, 100_000_000, orderBook);
+const trendFollower = new TrendFollower(
+  { [firstOrderBookName]: { asset: orderBook, assetQuntity: 1000 } },
+  1000,
+  All_OrderBook,
+);
+const marketCorrectionTrader = new MarketCorrectionTrader(
+  { [firstOrderBookName]: { asset: orderBook, assetQuntity: 1000 } },
+  1000,
+  All_OrderBook,
+);
+const marketMaker = new MarketMaker(
+  { [firstOrderBookName]: { asset: orderBook, assetQuntity: 1000 } },
+  100_000,
+  All_OrderBook,
+);
+const player = new Player({}, 2000, All_OrderBook);
+
 
 // ============================================================
 // Event System
@@ -256,12 +274,16 @@ function maybeFireEvents() {
 function tickTraders(sentiment: number) {
   // const abs = Math.abs(sentiment);
   const abs = 0;
-  randomTrader.placeOrder(10, randomTrader, sentiment);
-  trendFollower.placeOrder(10, trendFollower, sentiment);
-  marketCorrectionTrader.placeOrder(marketCorrectionTrader, sentiment);
-  // marketMaker.placeOrder(1, marketMaker, sentiment);
+  randomTrader.placeOrder(10, randomTrader, sentiment, orderBook);
+  trendFollower.placeOrder(10, trendFollower, sentiment, orderBook);
+  marketCorrectionTrader.placeOrder(
+    marketCorrectionTrader,
+    sentiment,
+    orderBook,
+  );
 
- 
+  console.log(player.assetInventory);
+  // marketMaker.placeOrder(1, marketMaker, sentiment);
 
   // Random traders flood market during panic/hype (1x → 5x)
   // const randomBurst = Math.max(1, Math.round(1 + abs * 4));
@@ -283,8 +305,6 @@ function tickTraders(sentiment: number) {
 
   // Market maker always runs — but spread widens with sentiment (handled inside)
   // marketMaker.placeOrder(5, marketMaker, sentiment);
-
-  
 }
 
 // ============================================================
@@ -399,9 +419,9 @@ function gameLoop() {
   redrawCandles();
 
   // 8. Stop after canvas fills up
-  // if (tick > 1.5 * window.innerWidth) {
-  //   clearInterval(loop);
-  // }
+  if (tick > 1.5 * window.innerWidth) {
+    clearInterval(loop);
+  }
 }
 
 const loop = setInterval(gameLoop, 10);

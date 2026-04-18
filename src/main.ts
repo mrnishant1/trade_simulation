@@ -5,7 +5,13 @@ type TraderType =
   | RandomTrader
   | TrendFollower
   | MarketCorrectionTrader
-  | MarketMaker;
+  | MarketMaker
+| Player;
+
+type asset = {
+  asset: OrderBook;
+  assetQuntity: number;
+};
 
 export class Order {
   OrderType: OrderType;
@@ -392,11 +398,27 @@ export class OrderBook {
         const settlementShares = tradeQty;
 
         const Buyer = newOrder.Order_PlacedBy;
-        Buyer.cashDeposit -= settlementMoney;
-        Buyer.assetInventory += settlementShares;
         const Seller = bestSell.Order_PlacedBy;
+
+        Buyer.cashDeposit -= settlementMoney;
+        if (!Buyer.assetInventory[ShareName]) {
+          Buyer.assetInventory[ShareName] = {
+            asset: Buyer.all_OrderBooks[ShareName],
+            assetQuntity: settlementShares,
+          };
+        } else {
+          Buyer.assetInventory[ShareName].assetQuntity += settlementShares;
+        }
+
         Seller.cashDeposit += settlementMoney;
-        Seller.assetInventory -= settlementShares;
+        if (!Seller.assetInventory[ShareName]) {
+          Seller.assetInventory[ShareName] = {
+            asset: Seller.all_OrderBooks[ShareName],
+            assetQuntity: settlementShares,
+          };
+        } else {
+          Seller.assetInventory[ShareName].assetQuntity -= settlementShares;
+        }
 
         // console.log("setteling");
 
@@ -440,12 +462,27 @@ export class OrderBook {
         const settlementShares = tradeQty;
 
         const Seller = newOrder.Order_PlacedBy;
-        Seller.cashDeposit += settlementMoney;
-        Seller.assetInventory -= settlementShares;
-
         const Buyer = bestBuy.Order_PlacedBy;
+
         Buyer.cashDeposit -= settlementMoney;
-        Buyer.assetInventory += settlementShares;
+        if (!Buyer.assetInventory[ShareName]) {
+          Buyer.assetInventory[ShareName] = {
+            asset: Buyer.all_OrderBooks[ShareName],
+            assetQuntity: settlementShares,
+          };
+        } else {
+          Buyer.assetInventory[ShareName].assetQuntity += settlementShares;
+        }
+
+        Seller.cashDeposit += settlementMoney;
+        if (!Seller.assetInventory[ShareName]) {
+          Seller.assetInventory[ShareName] = {
+            asset: Seller.all_OrderBooks[ShareName],
+            assetQuntity: settlementShares,
+          };
+        } else {
+          Seller.assetInventory[ShareName].assetQuntity -= settlementShares;
+        }
 
         // console.log("setteling");
         //settel the market price here =======
@@ -511,8 +548,6 @@ export class OrderBook {
 
     return { top20BuyOrders, top20SellOrders };
   }
-
-  sentimentHandler() {}
 
   #deleteMax(heap: number[]) {
     if (heap.length === 0) return null;
@@ -656,19 +691,19 @@ export class Candle {
 //==============================Traders======================================
 
 export class RandomTrader {
-  assetInventory: number;
+  assetInventory: Record<string, asset>;
   cashDeposit: number;
-  OrderBook: OrderBook;
+  all_OrderBooks: Record<string, OrderBook>;
 
   // OrderQuantity: number;
   constructor(
-    assetInventory: number,
+    assetInventory: Record<string, asset>,
     cashDeposit: number,
-    OrderBook: OrderBook,
+    all_OrderBooks: Record<string, OrderBook>,
   ) {
     this.assetInventory = assetInventory;
     this.cashDeposit = cashDeposit;
-    this.OrderBook = OrderBook;
+    this.all_OrderBooks = all_OrderBooks;
 
     // this.OrderQuantity = 0;
   }
@@ -687,9 +722,12 @@ export class RandomTrader {
     OrderQuantity: number,
     TraderInstance: TraderType,
     sentiment: number,
+    orderBook: OrderBook,
   ) {
+    // console.log(this.assetInventory);
     if (OrderQuantity < 0) return;
-    const currentMKP = this.OrderBook.Current_Market_SharePrice;
+    const OrderBook = orderBook;
+    const currentMKP = OrderBook.Current_Market_SharePrice;
     //deciding knobs---> 1. sentiment-> buyprobability 2. variation 3. volitility range
     //=============
 
@@ -700,7 +738,7 @@ export class RandomTrader {
     const newPrice = Number((currentMKP + drift + variation).toFixed(2));
 
     //=============
-    
+
     // const newPrice = Number((currentMKP + variation).toFixed(2));
     const OrderType: OrderType =
       Math.random() < buyProbability ? "Buy" : "Sell";
@@ -720,29 +758,30 @@ export class RandomTrader {
     //   this.assetInventory,
     //   this.cashDeposit,
     // );
-    return this.OrderBook.place_Order(
+
+    return OrderBook.place_Order(
       OrderType,
       newPrice,
       OrderQuantity,
-      this.OrderBook.ShareName,
+      OrderBook.ShareName,
       TraderInstance,
     );
   }
 }
 
 export class TrendFollower {
-  assetInventory: number;
+  assetInventory: Record<string, asset>;
   cashDeposit: number;
-  OrderBook: OrderBook;
+  all_OrderBooks: Record<string, OrderBook>;
   // OrderQuantity: number;
   constructor(
-    assetInventory: number,
+    assetInventory: Record<string, asset>,
     cashDeposit: number,
-    OrderBook: OrderBook,
+    All_OrderBook: Record<string, OrderBook>,
   ) {
     this.assetInventory = assetInventory;
     this.cashDeposit = cashDeposit;
-    this.OrderBook = OrderBook;
+    this.all_OrderBooks = All_OrderBook;
 
     // this.OrderQuantity = 0;
   }
@@ -750,21 +789,23 @@ export class TrendFollower {
     OrderQuantity: number,
     TraderInstance: TraderType,
     sentiment: number,
+    OrderBook: OrderBook,
   ) {
+    const orderBook = OrderBook;
     if (OrderQuantity < 0) return;
-    const current = this.OrderBook.Current_Market_SharePrice;
-    const trend = this.OrderBook.trendAvg - this.OrderBook.averagePrice;
+    const current = orderBook.Current_Market_SharePrice;
+    const trend = orderBook.trendAvg - orderBook.averagePrice;
     //deciding knobs---> 1.sentiment 2. threshold 3. volitility range
     //=======================
-    const threshold = 0.01 * this.OrderBook.averagePrice; //1% of what old 50th order was
-    let strength = trend / threshold ; //strength = trend + news(sentiment)
+    const threshold = 0.01 * orderBook.averagePrice; //1% of what old 50th order was
+    let strength = trend / threshold; //strength = trend + news(sentiment)
     strength *= 1 + sentiment * 0.8;
     const volatilityRange = 0.002 * (1 + Math.abs(sentiment) * 2);
     let price =
-    strength > 0
-    ? current * (1 + Math.abs(Math.random()) * volatilityRange)
-    : current * (1 - Math.abs(Math.random()) * volatilityRange);
-    
+      strength > 0
+        ? current * (1 + Math.abs(Math.random()) * volatilityRange)
+        : current * (1 - Math.abs(Math.random()) * volatilityRange);
+
     let OrderType = strength > 0 ? "Buy" : "Sell";
     const Quantity = OrderQuantity * Math.min(Math.abs(strength), 2);
 
@@ -784,35 +825,40 @@ export class TrendFollower {
     //   this.cashDeposit,
     // );
 
-    return this.OrderBook.place_Order(
+    return orderBook.place_Order(
       OrderType as "Buy" | "Sell",
       price,
       Quantity,
-      this.OrderBook.ShareName,
+      orderBook.ShareName,
       TraderInstance,
     );
   }
 }
 
 export class MarketCorrectionTrader {
-  assetInventory: number;
+  assetInventory: Record<string, asset>;
   cashDeposit: number;
-  OrderBook: OrderBook;
+  all_OrderBooks: Record<string, OrderBook>;
   // OrderQuantity: number;
   constructor(
-    assetInventory: number,
+    assetInventory: Record<string, asset>,
     cashDeposit: number,
-    OrderBook: OrderBook,
+    all_OrderBooks: Record<string, OrderBook>,
   ) {
     this.assetInventory = assetInventory;
     this.cashDeposit = cashDeposit;
-    this.OrderBook = OrderBook;
+    this.all_OrderBooks = all_OrderBooks;
 
     // this.OrderQuantity = 0;
   }
-  placeOrder(TraderInstance: TraderType, sentiment: number) {
-    const current = this.OrderBook.Current_Market_SharePrice;
-    const avg = this.OrderBook.averagePrice;
+  placeOrder(
+    TraderInstance: TraderType,
+    sentiment: number,
+    OrderBook: OrderBook,
+  ) {
+    const orderBook = OrderBook;
+    const current = orderBook.Current_Market_SharePrice;
+    const avg = orderBook.averagePrice;
     const threshold = avg * 0.01; //1%
     if (threshold == 0) return;
     let strength = (current - avg) / threshold; //
@@ -847,11 +893,11 @@ export class MarketCorrectionTrader {
     // console.log("price",price);
     //strenght >0 devitation +ve sell//else buy
     if (Math.random() < probability) {
-      return this.OrderBook.place_Order(
+      return orderBook.place_Order(
         OrderType as "Sell" | "Buy",
         price,
         OrderQuantity,
-        this.OrderBook.ShareName,
+        orderBook.ShareName,
         TraderInstance,
       );
     }
@@ -859,24 +905,31 @@ export class MarketCorrectionTrader {
 }
 
 //Market maker should work when Random trader fails to provide the liquidity
+
 export class MarketMaker {
-  assetInventory: number;
+  assetInventory: Record<string, asset>;
   cashDeposit: number;
-  OrderBook: OrderBook;
+  all_OrderBooks: Record<string, OrderBook>;
 
   constructor(
-    assetInventory: number,
+    assetInventory: Record<string, asset>,
     cashDeposit: number,
-    OrderBook: OrderBook,
+    all_OrderBooks: Record<string, OrderBook>,
   ) {
     this.assetInventory = assetInventory;
     this.cashDeposit = cashDeposit;
-    this.OrderBook = OrderBook;
+    this.all_OrderBooks = all_OrderBooks;
   }
 
   //Its just to provide Liquidity- Buy offer at just below MKP and sell just above MKP
-  placeOrder(quantity: number, TraderInstance: TraderType, sentiment: number) {
-    const current = this.OrderBook.Current_Market_SharePrice;
+  placeOrder(
+    quantity: number,
+    TraderInstance: TraderType,
+    sentiment: number,
+    OrderBook: OrderBook,
+  ) {
+    const orderBook = OrderBook;
+    const current = orderBook.Current_Market_SharePrice;
 
     const spreadMultiplier = 1 + Math.abs(sentiment) * 3;
     const spread = current * 0.001 * spreadMultiplier;
@@ -899,24 +952,59 @@ export class MarketMaker {
     // }
 
     // place BOTH sides
-    this.OrderBook.place_Order(
+    orderBook.place_Order(
       "Buy",
       buyPrice,
       buyQty,
-      this.OrderBook.ShareName,
+      orderBook.ShareName,
       TraderInstance,
     );
-    this.OrderBook.place_Order(
+    orderBook.place_Order(
       "Sell",
       sellPrice,
       sellQty,
-      this.OrderBook.ShareName,
+      orderBook.ShareName,
+      TraderInstance,
+    );
+  }
+}
+
+export class Player {
+  assetInventory: Record<string, asset>;
+  totalAssetValue: number;
+  all_OrderBooks: Record<string, OrderBook>;
+  cashDeposit: number;
+  constructor(
+    assetInventory: Record<string, asset>,
+    cashDeposit: number,
+    all_OrderBooks: Record<string, OrderBook>,
+  ) {
+    this.cashDeposit = cashDeposit;
+    this.assetInventory = assetInventory; //The different assets player going to have
+    this.totalAssetValue = 0;
+    this.all_OrderBooks = all_OrderBooks;
+  }
+  placeOrder(
+    OrderQuantity: number,
+    TraderInstance: TraderType,
+    OrderBook: OrderBook,
+    OrderPrice: number,
+    OrderType: OrderType,
+  ) {
+    if (OrderQuantity < 0) return;
+
+    return OrderBook.place_Order(
+      OrderType,
+      OrderPrice,
+      OrderQuantity,
+      OrderBook.ShareName,
       TraderInstance,
     );
   }
 }
 
 //==============================Event System Affecting traders===============
+
 export class Event {
   name: string;
   dreadness: number; // [-1, 1] -1= negative news, 0= neutral, 1=positive news
