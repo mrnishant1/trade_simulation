@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+trading_dashboard.html
 
 # Editor directories and files
 .vscode/*

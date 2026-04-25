@@ -15,10 +15,6 @@ import {
 // Canvas Setup
 // ============================================================
 
-const STARTING_PRICE = 500;
-const CANDLE_WIDTH = 15;
-const CANDLE_INTERVAL = 10; // ticks per candle
-
 function initCanvas(id: string): {
   el: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
@@ -62,25 +58,9 @@ function renderPriceAxis() {
 renderPriceAxis();
 
 // ============================================================
-// Zoom
-// ============================================================
-
-let scale = 1;
-
-const zoomRange = document.getElementById("zoom-range") as HTMLInputElement;
-zoomRange?.addEventListener("input", () => {
-  scale = 10 * (Number(zoomRange.value) / 100 + 0.1);
-  tradeCanvas.width = scale * window.innerWidth;
-  tradeCanvas.height = scale * window.innerHeight;
-  priceCanvas.height = scale * window.innerHeight;
-  renderPriceAxis();
-  redrawCandles();
-});
-
-// ============================================================
 // Market Entities
 // ============================================================
-
+const STARTING_PRICE = 500;
 const firstOrderBookName = "Bananajs";
 const orderBook = new OrderBook(firstOrderBookName, STARTING_PRICE);
 const All_OrderBook = { [firstOrderBookName]: orderBook };
@@ -105,8 +85,19 @@ const marketMaker = new MarketMaker(
   100_000,
   All_OrderBook,
 );
-const player = new Player({}, 2000, All_OrderBook);
 
+export const player = new Player({}, 2000, All_OrderBook);
+
+function updatePlayerBal() {
+  let playerBal = document.getElementById("hud-balance");
+  let playerWorth = document.getElementById("hud-worth");
+  const balance = player.cashDeposit;
+  const monetryAsset = player.getPlayerWorth();
+  if (playerBal && playerWorth) {
+    playerBal.textContent = `$${balance.toFixed(2)}`;
+    playerWorth.textContent = `$${monetryAsset.toFixed(2)}`;
+  }
+}
 
 // ============================================================
 // Event System
@@ -317,22 +308,35 @@ function renderOrderBook(
 ) {
   const buyContainer = document.getElementById("buyOrders");
   const sellContainer = document.getElementById("sellOrders");
-  if (!buyContainer || !sellContainer) return;
+  if (!buyContainer || !sellContainer) {
+    console.log("no buycontainer");
+    return;
+  }
 
   buyContainer.innerHTML = Array.from(buyMap.entries())
     .map(
       ([p, q]) =>
-        `<div class="row buy"><span>${p}</span><span>${q}</span></div>`,
+        `<div class="order-row buy-row" style="position:relative;"><span>${p}</span><span class="order-qty; color='#';">${q}</span></div>`,
     )
     .join("");
 
   sellContainer.innerHTML = Array.from(sellMap.entries())
     .map(
       ([p, q]) =>
-        `<div class="row sell"><span>${p}</span><span>${q}</span></div>`,
+        `<div class="order-row sell-row" style="position:relative;"><span>${p}</span><span class="order-qty; color='#';">${q}</span></div>`,
     )
     .join("");
 }
+
+// ── LIVE CLOCK ──────────────────────────────────────────────
+// function updateClock() {
+//   const now = new Date();
+//   const s = now.toUTCString().slice(17,25) + ' UTC';
+//   document.getElementById('clock-hud')!.textContent = s;
+//   document.getElementById('chart-time')!.textContent = s + ' · auto';
+// }
+// setInterval(updateClock, 1000);
+// updateClock();
 
 // ============================================================
 // Candle State
@@ -351,13 +355,14 @@ function applyTransform(offset = cameraOffset) {
 }
 
 function redrawCandles() {
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, tradeCanvas.width, tradeCanvas.height);
-  applyTransform();
+  // ctx.setTransform(1, 0, 0, 1, 0, 0);
+  // ctx.clearRect(0, 0, tradeCanvas.width, tradeCanvas.height);
+  // applyTransform();
 
   const start = Math.max(0, candles.length - 100);
   for (let i = start; i < candles.length; i++) {
     candles[i].draw();
+    //Line follwing price candles-------------
     if (i > start) {
       const prev = candles[i - 1];
       const curr = candles[i];
@@ -374,6 +379,8 @@ function redrawCandles() {
 // ============================================================
 // Game Loop
 // ============================================================
+const CANDLE_WIDTH = 15;
+const CANDLE_INTERVAL = 100; // ticks per candle
 
 function gameLoop() {
   // 1. Tick event system — prune expired events
@@ -396,10 +403,17 @@ function gameLoop() {
   // 5. Draw live price tick
   applyTransform();
   const liveCandle = new Candle(ctx, candleX, priceBefore, price);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, tradeCanvas.width, tradeCanvas.height);
+  applyTransform();
   liveCandle.draw();
 
-  // 6. Every CANDLE_INTERVAL ticks — commit candle and update order book UI
+  // 6. Every CANDLE_INTERVAL ticks —> commit candle and update order book UI
   if (tick % CANDLE_INTERVAL === 0) {
+    // 0. Player Balance update
+    updatePlayerBal();
+
+
     const committed = new Candle(ctx, candleX, priceBefore, price);
     candles.push(committed);
     candleX += CANDLE_WIDTH;
@@ -409,14 +423,14 @@ function gameLoop() {
       cameraOffset -= CANDLE_WIDTH;
     }
 
-    renderOrderBook(
-      orderBook.orderBookRecords().top20BuyOrders,
-      orderBook.orderBookRecords().top20SellOrders,
-    );
   }
+  renderOrderBook(
+    orderBook.orderBookRecords().top20BuyOrders,
+    orderBook.orderBookRecords().top20SellOrders,
+  );
+  redrawCandles();
 
   // 7. Redraw all committed candles
-  redrawCandles();
 
   // 8. Stop after canvas fills up
   if (tick > 1.5 * window.innerWidth) {
@@ -431,16 +445,19 @@ const loop = setInterval(gameLoop, 10);
 // ============================================================
 
 let dragStartX = 0;
+let dragStartY = 0;
 let isDragging = false;
 
 window.addEventListener("mousedown", (e) => {
   isDragging = true;
   dragStartX = e.clientX;
+  dragStartY = e.clientY;
 });
 
 window.addEventListener("mousemove", (e) => {
   if (!isDragging) return;
   const dx = e.clientX - dragStartX;
+
   redrawCandles(); // redraw at current offset first
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -458,3 +475,7 @@ window.addEventListener("mouseup", (e) => {
   cameraOffset += e.clientX - dragStartX;
   isDragging = false;
 });
+
+// ============================================================
+// Zoom
+// ============================================================

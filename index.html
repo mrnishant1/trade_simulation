@@ -1,213 +1,291 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Canvas</title>
+  <title>BananaJS — TradingCorp.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./index.css">
+  <script src="./src/index.ts" type="module"></script>
 </head>
+<body>
 
-<body style="background: 
-    repeating-linear-gradient(
-      to bottom,
-      rgba(0,0,0,0.03) 0px,
-      rgba(0,0,0,0.03) 1px,
-      transparent 1px,
-      transparent 6px
-    ),
-    #27405f;">
+<div class="app">
 
-  <!-- Index.css Styling -->
-  <link rel="stylesheet" href="index.css">
-
-  <div class="app">
-    <div class="topbar">
-      <div class="topbar-left">
-        <!-- Platform -->
-        <span class="logo">BananaJs</span>
-        <div class="pair-tab">
-          <!-- Share Name -->
-          <div class="flag" id="ShareName"></div> Banana/USD
-        </div>
-
-      </div>
-
-      <div class="topbar-icons">
-        
-        <div class="icon-btn"><svg viewBox="0 0 16 16">
-            <circle cx="8" cy="8" r="5" />
-            <polyline points="8,5 8,8 10,9" />
-          </svg></div>
-        <div class="icon-btn"><svg viewBox="0 0 16 16">
-            <circle cx="8" cy="8" r="6" />
-            <line x1="8" y1="5" x2="8" y2="8" />
-            <circle cx="8" cy="11" r="0.5" fill="#9098a3" />
-          </svg></div>
-        <div class="icon-btn"><svg viewBox="0 0 16 16">
-            <rect x="2" y="2" width="5" height="5" rx="1" />
-            <rect x="9" y="2" width="5" height="5" rx="1" />
-            <rect x="2" y="9" width="5" height="5" rx="1" />
-            <rect x="9" y="9" width="5" height="5" rx="1" />
-          </svg></div>
-        <div class="icon-btn"><svg viewBox="0 0 16 16">
-            <circle cx="8" cy="5" r="3" />
-            <path d="M2 14 c0-4 12-4 12 0" />
-          </svg></div>
-        <button class="deposit-btn">Deposit</button>
+  <!-- ── TOPBAR ── -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="logo">MonkeyTrade</span>
+      <div class="pair-tab">
+        <div class="flag" id="ShareName"></div>
+        BANANA / USD
       </div>
     </div>
-
-    <div class="main">
-      <div class="sidebar">
-        <div class="sidebar-header">
-          <span class="sidebar-title">Instruments</span>
-          <div class="sidebar-actions"><span>⋮</span><span>✕</span></div>
-        </div>
-        <div class="search-box">
-          Market Price: <button id="price-btn">-</button>
-        </div>
-        <div class="dropdown-bar">
-          <span>OrderBook:</span> <span>BananaJs ▾</span>
-        </div>
-        <div class=" " style="display: flex; justify-content: space-around;">
-          <span>Bid</span>
-          <span>Ask</span>
-        </div>
-        <div class="orderbook-table">
-          <div class="side">
-            <div id="buyOrders"></div>
-          </div>
-
-          <div class="side">
-            <div id="sellOrders"></div>
-          </div>
-
-        </div>
-      </div>
-
-      <div class="chart-area">
-        <input type="range" id="zoom-range" name="percentage-range" min="0" max="100" value="1">
-        <div class="chart-toolbar">
-          <div class="buy-sell">
-
-            <span class="event-btn">Active Event: </span>
-            <span class="spread-badge">—</span>
-            <button class="sell-btn">Sell —</button>
-            <span class="spread-badge">—</span>
-            <button class="buy-btn">Buy —</button>
-          </div>
-        </div>
-
-        <div class="chart-canvas" style="display: flex;">
-
-
-          <div style="width: 100%; height: 100%;">
-            <!-- Canvas Chart- Trading candles -->
-            <canvas id="monkey_trade" style="background-color: #141720; height: 100%; width: 100%;"></canvas>
-          </div>
-
-          <div class="price-axis"
-            style="width: 5%; height: 100%; position: relative; padding: 0; display: flex; flex-direction: column; justify-content: space-evenly;">
-            <canvas id="price-axis" style="background-color: #222635; height: 100%; width: 100%; "></canvas>
-          </div>
-        </div>
-
-        <div class="time-axis">
-          <span class="time-tick">0</span>
-          <span class="time-tick">10</span>
-          <span class="time-tick">20</span>
-          <span class="time-tick">30</span>
-          <span class="time-tick">40</span>
-          <span class="time-tick">50</span>
-          <span style="margin-left:auto;font-size:10px;color:#9098a3;">21:49:58 UTC · auto</span>
-        </div>
-
-        <div class="positions-bar">
-          <div class="pos-tab">OPEN <span class="badge">0</span></div>
-          <div class="pos-tab">PENDING <span class="badge">0</span></div>
-          <div class="pos-tab">CLOSED</div>
-          <div style="margin-left:auto;font-size:11px;color:#9098a3;">⤢</div>
-        </div>
-
-        <div class="status-bar">
-          <div class="status-item">Equity: <span class="status-val">0.00 USD</span></div>
-          <div class="status-item">Free Margin: <span class="status-val">0.00 USD</span></div>
-          <div class="status-item">Balance: <span class="status-val">0.00 USD</span></div>
-          <div class="status-item">Margin: <span class="status-val">0.00 USD</span></div>
-          <div class="status-item">Margin level: <span class="status-val">—</span></div>
-        </div>
-      </div>
+    <div class="topbar-icons">
+      <div class="icon-btn"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5"/><polyline points="8,5 8,8 10,9"/></svg></div>
+      <div class="icon-btn"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8"/><circle cx="8" cy="11" r="0.5" fill="#9098a3"/></svg></div>
+      <div class="icon-btn"><svg viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg></div>
+      <div class="icon-btn"><svg viewBox="0 0 16 16"><circle cx="8" cy="5" r="3"/><path d="M2 14 c0-4 12-4 12 0"/></svg></div>
+      <button class="deposit-btn">+ Deposit</button>
     </div>
   </div>
 
-  <!-- <div class="dash" style="    
-    height: 50%;
-    width: 50%;
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    background: rgb(79, 85, 117);">
-    <div class="top-bar">
-      <h2>Event system monitor</h2>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <span id="clock" style="font-size:12px;color:var(--color-text-secondary);font-family:var(--font-mono);"></span>
-        <span id="status-dot"
-          style="width:8px;height:8px;border-radius:50%;background:#1D9E75;display:inline-block;"></span>
+  <!-- ── PLAYER HUD STRIP ── -->
+  <div class="player-hud">
+    <div class="hud-stat">
+      <span class="hud-label">CashBal:</span>
+      <span class="hud-val" id="hud-balance"></span>
+      <span class="hud-label">Player Worth:</span>
+      <span class="hud-val" id="hud-worth"></span>
+    </div>
+    <div class="hud-sep"></div>
+    <div class="hud-stat">
+      <span class="hud-label">P&L</span>
+      <span class="hud-val" id="hud-pnl" style="color:var(--accent-green)">+$48.20</span>
+    </div>
+    <div class="hud-sep"></div>
+    <div class="hud-stat">
+      <span class="hud-label">Win Rate</span>
+      <span class="hud-val" style="color:var(--accent-blue)" id="hud-wr">68%</span>
+    </div>
+    <div class="hud-sep"></div>
+    <div class="level-badge">LVL 7</div>
+    <div class="xp-bar-wrap">
+      <span class="xp-label">XP</span>
+      <div class="xp-track"><div class="xp-fill" id="xp-fill"></div></div>
+      <span class="xp-label" id="xp-text">620/1000</span>
+    </div>
+    <div class="hud-sep"></div>
+    <div class="streak-badge">
+      <span class="fire">🔥</span>
+      <span id="streak-count">3</span>
+      <span style="color:var(--text-dim);font-size:8px;"> STREAK</span>
+    </div>
+    <div style="margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--text-dim)" id="clock-hud">00:00:00 UTC</div>
+  </div>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+
+    <!-- ── SIDEBAR ── -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Instruments</span>
+        <div class="sidebar-actions"><span>⋮</span><span style="cursor:pointer">✕</span></div>
+      </div>
+      <div class="search-box">
+        Market Price:
+        <button id="price-btn">—</button>
+      </div>
+      <div class="dropdown-bar">
+        <span>OrderBook:</span>
+        <span>BananaJs ▾</span>
+      </div>
+      <div class="orderbook-header">
+        <span>BID</span>
+        <span>ASK</span>
+      </div>
+      <div class="orderbook-table">
+        <div class="side"><div style="height: 100%;" id="buyOrders"></div></div>
+        <div class="side"><div style="height: 100%;" id="sellOrders"></div></div>
+      </div>
+
+      <!-- Quest panel -->
+      <div class="quest-panel">
+        <div class="quest-title">⚔ Daily Quests</div>
+
+        <div class="quest-item">
+          <div class="quest-icon" style="background:rgba(56,189,248,0.1)">📈</div>
+          <div class="quest-text">
+            <div class="quest-name">Trade 5x</div>
+            <div class="quest-bar-track"><div class="quest-bar-fill" style="width:60%;background:var(--accent-blue)"></div></div>
+            <div class="quest-prog">3 / 5</div>
+          </div>
+          <div class="quest-xp">+50 XP</div>
+        </div>
+
+        <div class="quest-item">
+          <div class="quest-icon" style="background:rgba(0,255,163,0.1)">💰</div>
+          <div class="quest-text">
+            <div class="quest-name">Profit $20</div>
+            <div class="quest-bar-track"><div class="quest-bar-fill" style="width:100%;background:var(--accent-green)"></div></div>
+            <div class="quest-prog" style="color:var(--accent-green)">COMPLETE ✓</div>
+          </div>
+          <div class="quest-xp" style="color:var(--accent-green)">+30 XP</div>
+        </div>
+
+        <div class="quest-item">
+          <div class="quest-icon" style="background:rgba(168,85,247,0.1)">🎯</div>
+          <div class="quest-text">
+            <div class="quest-name">3 Win Streak</div>
+            <div class="quest-bar-track"><div class="quest-bar-fill" style="width:100%;background:var(--accent-purple)"></div></div>
+            <div class="quest-prog" style="color:var(--accent-purple)">COMPLETE ✓</div>
+          </div>
+          <div class="quest-xp" style="color:var(--accent-purple)">+80 XP</div>
+        </div>
+
       </div>
     </div>
 
-    <div class="metrics">
-      <div class="metric">
-        <div class="metric-label">Active events</div>
-        <div class="metric-value" id="m-active">0</div>
+    <!-- ── CHART AREA ── -->
+    <div class="chart-area">
+      <input type="range" id="zoom-range" name="percentage-range" min="0" max="100" value="1">
+
+      <div class="chart-toolbar">
+        <div class="buy-sell">
+          <span class="event-btn">Active Event:</span>
+          <span class="spread-badge" id="spread-bid">—</span>
+          <button class="sell-btn" id="sell-btn">SELL —</button>
+          <span class="spread-badge">SPREAD</span>
+          <button class="buy-btn" id="buy-btn">BUY —</button>
+          <span class="spread-badge" id="spread-ask">—</span>
+          <div class="active-event-badge" id="active-event">
+            <div class="event-dot"></div>
+            <span id="event-text">Active Event...</span>
+          </div>
+        </div>
       </div>
-      <div class="metric">
-        <div class="metric-label">Market sentiment</div>
-        <div class="metric-value" id="m-sentiment">0.00</div>
+
+      <!-- Combo counter -->
+      <div class="combo-wrap">
+        <div class="combo-display" id="combo-display">x3 COMBO!</div>
+        <div class="combo-sub">WIN STREAK</div>
       </div>
-      <div class="metric">
-        <div class="metric-label">Avg dreadness</div>
-        <div class="metric-value" id="m-dread">0.00</div>
+
+      <div class="chart-canvas" style="display:flex;">
+        <div style="width:100%;height:100%;position:relative;">
+          <canvas id="monkey_trade" style="height:100%;width:100%;display:block;"></canvas>
+        </div>
+        <div class="price-axis">
+          <canvas id="price-axis" style="height:100%;width:100%;display:block;"></canvas>
+        </div>
       </div>
-      <div class="metric">
-        <div class="metric-label">Events fired</div>
-        <div class="metric-value" id="m-fired">0</div>
+
+      <div class="time-axis">
+        <span class="time-tick">0</span>
+        <span class="time-tick">10</span>
+        <span class="time-tick">20</span>
+        <span class="time-tick">30</span>
+        <span class="time-tick">40</span>
+        <span class="time-tick">50</span>
+        <span style="margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--text-dim)" id="chart-time">00:00:00 UTC · auto</span>
+      </div>
+
+      <div class="positions-bar">
+        <div class="pos-tab active">OPEN <span class="badge" id="open-count">0</span></div>
+        <div class="pos-tab">PENDING <span class="badge">0</span></div>
+        <div class="pos-tab">CLOSED</div>
+        <div style="margin-left:auto;font-size:11px;color:var(--text-dim);">⤢</div>
+      </div>
+
+      <div class="status-bar">
+        <div class="status-item">Equity: <span class="status-val" id="stat-equity">0.00 USD</span></div>
+        <div class="status-item">Free Margin: <span class="status-val">0.00 USD</span></div>
+        <div class="status-item">Balance: <span class="status-val" id="stat-balance">0.00 USD</span></div>
+        <div class="status-item">Margin: <span class="status-val">0.00 USD</span></div>
+        <div class="status-item">Margin level: <span class="status-val">—</span></div>
       </div>
     </div>
 
-    <div class="sentiment-bar-wrap">
-      <div class="sentiment-label"><span>Bearish -1</span><span id="sentiment-text"
-          style="font-weight:500;color:var(--color-text-primary);">Neutral</span><span>Bullish +1</span></div>
-      <div class="bar-track">
-        <div class="bar-center"></div>
-        <div class="bar-fill" id="bar-fill"></div>
+    <!-- ── RIGHT PANEL ── -->
+    <div class="right-panel">
+
+      <div class="rp-section">
+        <div class="rp-title">📊 Session Stats</div>
+        <div class="stats-ring">
+          <div class="stat-ring-item">
+            <div class="ring-val" style="color:var(--accent-green)" id="stat-trades">0</div>
+            <div class="ring-label">Trades</div>
+          </div>
+          <div class="stat-ring-item">
+            <div class="ring-val" style="color:var(--accent-blue)" id="stat-wins">0</div>
+            <div class="ring-label">Wins</div>
+          </div>
+          <div class="stat-ring-item">
+            <div class="ring-val" style="color:var(--accent-red)" id="stat-losses">0</div>
+            <div class="ring-label">Losses</div>
+          </div>
+        </div>
       </div>
+
+      <div class="rp-section">
+        <div class="rp-title">🏆 Achievements</div>
+
+        <div class="achievement unlocked">
+          <div class="ach-icon">🥇</div>
+          <div class="ach-info">
+            <div class="ach-name">First Blood</div>
+            <div class="ach-desc">First profitable trade</div>
+          </div>
+        </div>
+
+        <div class="achievement unlocked">
+          <div class="ach-icon">🔥</div>
+          <div class="ach-info">
+            <div class="ach-name">On Fire</div>
+            <div class="ach-desc">3 win streak</div>
+          </div>
+        </div>
+
+        <div class="achievement">
+          <div class="ach-icon" style="opacity:0.3">💎</div>
+          <div class="ach-info">
+            <div class="ach-name" style="color:var(--text-dim)">Diamond Hands</div>
+            <div class="ach-desc">Hold for 1hr</div>
+          </div>
+        </div>
+
+        <div class="achievement">
+          <div class="ach-icon" style="opacity:0.3">🚀</div>
+          <div class="ach-info">
+            <div class="ach-name" style="color:var(--text-dim)">Moon Shot</div>
+            <div class="ach-desc">+$500 in a day</div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="rp-section">
+        <div class="rp-title">🏅 Leaderboard</div>
+
+        <div class="lb-row">
+          <div class="lb-rank gold">1</div>
+          <div class="lb-avatar">🦁</div>
+          <div class="lb-name">KingTrade</div>
+          <div class="lb-pnl">+$842</div>
+        </div>
+        <div class="lb-row">
+          <div class="lb-rank silver">2</div>
+          <div class="lb-avatar" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">🐺</div>
+          <div class="lb-name">WolfPack</div>
+          <div class="lb-pnl">+$621</div>
+        </div>
+        <div class="lb-row">
+          <div class="lb-rank bronze">3</div>
+          <div class="lb-avatar" style="background:linear-gradient(135deg,#10b981,#3b82f6)">🦅</div>
+          <div class="lb-name">EagleEye</div>
+          <div class="lb-pnl">+$480</div>
+        </div>
+        <div class="lb-row" style="background:rgba(0,255,163,0.05);border-radius:3px;padding:5px 4px;margin:2px 0;border:1px solid rgba(0,255,163,0.15)">
+          <div class="lb-rank" style="color:var(--accent-green)">7</div>
+          <div class="lb-avatar" style="background:linear-gradient(135deg,#00ffa3,#38bdf8)">👤</div>
+          <div class="lb-name you">You</div>
+          <div class="lb-pnl" id="lb-you-pnl">+$48</div>
+        </div>
+        <div class="lb-row">
+          <div class="lb-rank">8</div>
+          <div class="lb-avatar" style="background:linear-gradient(135deg,#6b7280,#374151)">🐻</div>
+          <div class="lb-name">BearTrap</div>
+          <div class="lb-pnl" style="color:var(--accent-red)">-$12</div>
+        </div>
+      </div>
+
     </div>
+  </div>
+</div>
 
-    <div class="section-label">Active events</div>
-    <div class="events-grid" id="events-grid">
-      <div class="empty-state" style="grid-column:1/-1;">No active events — trigger one below</div>
-    </div>
-
-    <div class="section-label" style="margin-top:1rem;">Controls</div>
-    <div class="controls" style="margin-bottom:1rem;">
-      <button id="btn">Earnings beat</button>
-      <button id="btn">Rate hike</button>
-      <button id="btn">Geopolitical shock</button>
-      <button id="btn">Product launch</button>
-      <button id="btn">Fraud scandal</button>
-      <button id="btn">Macro data</button>
-      <button onclick="fireRandom()">Random event</button>
-      <button onclick="clearAll()" style="color:var(--color-text-danger);">Clear all</button>
-    </div>
-
-    <div class="section-label">Event log</div>
-    <div class="log" id="log"></div>
-  </div> -->
-
-
-
-  <script type="module" src="/src/index.ts"></script>
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
 </body>
-
 </html>

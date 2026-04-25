@@ -649,8 +649,8 @@ export class Candle {
   }
 
   draw() {
-    // console.log(this.close);
-    // console.log(this.posX,"hi");
+    // console.log("Draw called");
+
     if (!this.ctx) return;
 
     const ctx = this.ctx;
@@ -984,6 +984,13 @@ export class Player {
     this.totalAssetValue = 0;
     this.all_OrderBooks = all_OrderBooks;
   }
+  getPlayerWorth(){
+    let playerworth = 0
+    for (const asset in this.assetInventory ){
+      playerworth+=this.assetInventory[asset].asset.Current_Market_SharePrice
+    }
+    return this.cashDeposit+playerworth;
+  }
   placeOrder(
     OrderQuantity: number,
     TraderInstance: TraderType,
@@ -992,6 +999,9 @@ export class Player {
     OrderType: OrderType,
   ) {
     if (OrderQuantity < 0) return;
+    // if(!this.assetInventory[`${OrderBook.ShareName}`]){
+    //   this.assetInventory[`${OrderBook.ShareName}`]
+    // }
 
     return OrderBook.place_Order(
       OrderType,
