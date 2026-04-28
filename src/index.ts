@@ -4,10 +4,10 @@ import {
   RandomTrader,
   TrendFollower,
   MarketCorrectionTrader,
-  MarketMaker,
-  type eventType,
-  Event,
-  EventSystem,
+  // MarketMaker,
+  // type eventType,
+  // Event,
+  // EventSystem,
   Player,
 } from "./main";
 
@@ -44,11 +44,12 @@ const marketCorrectionTrader = new MarketCorrectionTrader(
   1000,
   All_OrderBook,
 );
-const marketMaker = new MarketMaker(
-  { [firstOrderBookName]: { asset: Bananajs, assetQuntity: 1000 } },
-  100_000,
-  All_OrderBook,
-);
+// const marketMaker = new MarketMaker(
+//   { [firstOrderBookName]: { asset: Bananajs, assetQuntity: 1000 } },
+//   100_000,
+//   All_OrderBook,
+// );
+
 
 // ===================================================
 // Experimenting with player (Not the final verson But JUGAAD version)
@@ -101,160 +102,160 @@ function updatePlayerBal() {
 // Event System  (Has not yet implemented completely- workiing on it)
 // ============================================================
 
-const eventSystem = new EventSystem();
-const affected_Markets = [Bananajs];
+// const eventSystem = new EventSystem();
+// const affected_Markets = [Bananajs];
 
-const all_availableEvents: Record<eventType, Event[]> = {
-  Bullish: [
-    new Event(
-      "Bumper Harvest",
-      0.6,
-      3_600_000,
-      0.000_001,
-      0.05,
-      "Bullish",
-      7_200_000,
-      affected_Markets,
-    ),
-    new Event(
-      "New Banana Peel Patent",
-      0.3,
-      1_800_000,
-      0.000_05,
-      0.15,
-      "Bullish",
-      3_600_000,
-      affected_Markets,
-    ),
-  ],
-  Bearish: [
-    new Event(
-      "Panama Disease Outbreak",
-      -0.8,
-      5_400_000,
-      0.000_000_5,
-      0.02,
-      "Bearish",
-      14_400_000,
-      affected_Markets,
-    ),
-    new Event(
-      "Monkey Labor Strike",
-      -0.4,
-      1_200_000,
-      0.000_1,
-      0.1,
-      "Bearish",
-      3_600_000,
-      affected_Markets,
-    ),
-  ],
-  Hype: [
-    new Event(
-      "Influencer Smoothie Trend",
-      0.9,
-      600_000,
-      0.005,
-      0.08,
-      "Hype",
-      1_800_000,
-      affected_Markets,
-    ),
-  ],
-  Panic: [
-    new Event(
-      "Potassium Overdose Scare",
-      -0.95,
-      900_000,
-      0.008,
-      0.01,
-      "Panic",
-      21_600_000,
-      affected_Markets,
-    ),
-  ],
-  OVERVALUED: [
-    new Event(
-      "Retail Euphoria",
-      -0.2,
-      2_400_000,
-      0.000_1,
-      0.2,
-      "OVERVALUED",
-      3_600_000,
-      affected_Markets,
-    ),
-  ],
-  UNDERVALUED: [
-    new Event(
-      "Deep Value Discovery",
-      0.4,
-      3_600_000,
-      0.000_01,
-      0.1,
-      "UNDERVALUED",
-      7_200_000,
-      affected_Markets,
-    ),
-  ],
-  TREND_BOOST: [
-    new Event(
-      "Smoothie Season Arrival",
-      0.2,
-      7_200_000,
-      0.000_000_1,
-      0.3,
-      "TREND_BOOST",
-      0,
-      affected_Markets,
-    ),
-  ],
-  TREND_EXHAUSTION: [
-    new Event(
-      "Banana Saturation",
-      -0.1,
-      1_800_000,
-      0.000_1,
-      0.4,
-      "TREND_EXHAUSTION",
-      0,
-      affected_Markets,
-    ),
-  ],
-};
+// const all_availableEvents: Record<eventType, Event[]> = {
+//   Bullish: [
+//     new Event(
+//       "Bumper Harvest",
+//       0.6,
+//       3_600_000,
+//       0.000_001,
+//       0.05,
+//       "Bullish",
+//       7_200_000,
+//       affected_Markets,
+//     ),
+//     new Event(
+//       "New Banana Peel Patent",
+//       0.3,
+//       1_800_000,
+//       0.000_05,
+//       0.15,
+//       "Bullish",
+//       3_600_000,
+//       affected_Markets,
+//     ),
+//   ],
+//   Bearish: [
+//     new Event(
+//       "Panama Disease Outbreak",
+//       -0.8,
+//       5_400_000,
+//       0.000_000_5,
+//       0.02,
+//       "Bearish",
+//       14_400_000,
+//       affected_Markets,
+//     ),
+//     new Event(
+//       "Monkey Labor Strike",
+//       -0.4,
+//       1_200_000,
+//       0.000_1,
+//       0.1,
+//       "Bearish",
+//       3_600_000,
+//       affected_Markets,
+//     ),
+//   ],
+//   Hype: [
+//     new Event(
+//       "Influencer Smoothie Trend",
+//       0.9,
+//       600_000,
+//       0.005,
+//       0.08,
+//       "Hype",
+//       1_800_000,
+//       affected_Markets,
+//     ),
+//   ],
+//   Panic: [
+//     new Event(
+//       "Potassium Overdose Scare",
+//       -0.95,
+//       900_000,
+//       0.008,
+//       0.01,
+//       "Panic",
+//       21_600_000,
+//       affected_Markets,
+//     ),
+//   ],
+//   OVERVALUED: [
+//     new Event(
+//       "Retail Euphoria",
+//       -0.2,
+//       2_400_000,
+//       0.000_1,
+//       0.2,
+//       "OVERVALUED",
+//       3_600_000,
+//       affected_Markets,
+//     ),
+//   ],
+//   UNDERVALUED: [
+//     new Event(
+//       "Deep Value Discovery",
+//       0.4,
+//       3_600_000,
+//       0.000_01,
+//       0.1,
+//       "UNDERVALUED",
+//       7_200_000,
+//       affected_Markets,
+//     ),
+//   ],
+//   TREND_BOOST: [
+//     new Event(
+//       "Smoothie Season Arrival",
+//       0.2,
+//       7_200_000,
+//       0.000_000_1,
+//       0.3,
+//       "TREND_BOOST",
+//       0,
+//       affected_Markets,
+//     ),
+//   ],
+//   TREND_EXHAUSTION: [
+//     new Event(
+//       "Banana Saturation",
+//       -0.1,
+//       1_800_000,
+//       0.000_1,
+//       0.4,
+//       "TREND_EXHAUSTION",
+//       0,
+//       affected_Markets,
+//     ),
+//   ],
+// };
 
 // Tracks cooldown expiry times per event name
-const eventCooldowns = new Map<string, number>();
+// const eventCooldowns = new Map<string, number>();
 
-function maybeFireEvents() {
-  const now = Date.now();
-  for (const events of Object.values(all_availableEvents)) {
-    for (const event of events) {
-      // Skip if on cooldown
-      const cooldownUntil = eventCooldowns.get(event.name) ?? 0;
-      if (now < cooldownUntil) continue;
-      // Skip if already active in the system
-      if (eventSystem.active_Events.some((e) => e.name === event.name))
-        continue;
-      // Roll against weight
-      if (Math.random() < event.weight_of_occuring) {
-        const fresh = new Event(
-          event.name,
-          event.dreadness,
-          event.tick_duration,
-          event.decayRate,
-          event.weight_of_occuring,
-          event.category,
-          event.coolDown,
-          affected_Markets,
-        );
-        eventSystem.addEvent(fresh);
-        eventCooldowns.set(event.name, now + event.coolDown);
-        console.log(`[EVENT] ${event.name} fired | dread=${event.dreadness}`);
-      }
-    }
-  }
-}
+// function maybeFireEvents() {
+//   const now = Date.now();
+//   for (const events of Object.values(all_availableEvents)) {
+//     for (const event of events) {
+//       // Skip if on cooldown
+//       const cooldownUntil = eventCooldowns.get(event.name) ?? 0;
+//       if (now < cooldownUntil) continue;
+//       // Skip if already active in the system
+//       if (eventSystem.active_Events.some((e) => e.name === event.name))
+//         continue;
+//       // Roll against weight
+//       if (Math.random() < event.weight_of_occuring) {
+//         const fresh = new Event(
+//           event.name,
+//           event.dreadness,
+//           event.tick_duration,
+//           event.decayRate,
+//           event.weight_of_occuring,
+//           event.category,
+//           event.coolDown,
+//           affected_Markets,
+//         );
+//         eventSystem.addEvent(fresh);
+//         eventCooldowns.set(event.name, now + event.coolDown);
+//         console.log(`[EVENT] ${event.name} fired | dread=${event.dreadness}`);
+//       }
+//     }
+//   }
+// }
 
 // ============================================================
 // Trader Firing — sentiment-scaled
@@ -262,7 +263,7 @@ function maybeFireEvents() {
 
 function tickTraders(sentiment: number) {
   // const abs = Math.abs(sentiment);
-  const abs = 0;
+  // const abs = 0;
   randomTrader.placeOrder(3, randomTrader, sentiment, Bananajs);
   trendFollower.placeOrder(10, trendFollower, sentiment, Bananajs);
   marketCorrectionTrader.placeOrder(
@@ -428,14 +429,14 @@ const CANDLE_INTERVAL = 100; // ticks per candle
 
 function gameLoop() {
   // 1. Tick event system — prune expired events
-  eventSystem.update();
+  // eventSystem.update();
 
   // 2. Maybe fire a new event this tick
   // maybeFireEvents();
 
   // 3. Get current sentiment and fire traders
-  const sentiment = eventSystem.getMarketSentiment();
-  // const sentiment = -0.1
+  // const sentiment = eventSystem.getMarketSentiment();
+  const sentiment = 0
   tickTraders(sentiment);
 
   // 4. Update price display
@@ -484,20 +485,21 @@ function gameLoop() {
   // }
 }
 
-const loop = setInterval(gameLoop, 10);
+// const loop = setInterval(gameLoop, 10);
+ setInterval(gameLoop, 10);
 
 // ============================================================
 // Drag to Scroll
 // ============================================================
 
 let dragStartX = 0;
-let dragStartY = 0;
+// let dragStartY = 0;
 let isDragging = false;
 
 window.addEventListener("mousedown", (e) => {
   isDragging = true;
   dragStartX = e.clientX;
-  dragStartY = e.clientY;
+  // dragStartY = e.clientY;
 });
 
 window.addEventListener("mousemove", (e) => {
