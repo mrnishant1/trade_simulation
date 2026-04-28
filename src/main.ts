@@ -6,7 +6,7 @@ type TraderType =
   | TrendFollower
   | MarketCorrectionTrader
   | MarketMaker
-| Player;
+  | Player;
 
 type asset = {
   asset: OrderBook;
@@ -621,6 +621,35 @@ export class OrderBook {
     }
     return total;
   }
+
+  toJSON() {
+    // const { top20BuyOrders, top20SellOrders } = this.orderBookRecords();
+    // console.log(this.BuyOrders_Heap.All_BuyOrders_Map.priceMap);
+    return {
+      _type: "OrderBook",
+      name: this.ShareName,
+      price: this.Current_Market_SharePrice,
+      // bids_heap: this.BuyOrders_Heap.priceHeap, // extract heap into plain array
+      // bids_orderMap: structuredClone(this.BuyOrders_Heap.All_BuyOrders_Map.priceMap),
+      // asks_heap: this.SellOrders_Heap.priceHeap,
+      // asks_orderMap: structuredClone(this.SellOrders_Heap.All_SellOrders_Map.priceMap),
+      lastPrices: this.lastPrices,
+      // top20BuyOrders:top20BuyOrders,
+      // top20SellOrders:top20SellOrders
+    };
+  }
+
+  static fromJSON(data: any): OrderBook {
+    // Basic reconstruction; full deserialization of heaps/maps would need custom logic
+    const ob = new OrderBook(data.name, data.price);
+    // ob.BuyOrders_Heap.priceHeap = data.bids_heap;
+    // ob.BuyOrders_Heap.All_BuyOrders_Map.priceMap = new Map(JSON.parse(JSON.stringify([...data.bids_orderMap])))
+    // ob.SellOrders_Heap.priceHeap = data.asks_heap;
+    // ob.SellOrders_Heap.All_SellOrders_Map.priceMap = new Map(JSON.parse(JSON.stringify([...data.asks_orderMap])))
+    ob.lastPrices = data.lastPrices;
+
+    return ob;
+  }
 }
 
 //==============================Candle=========================================
@@ -766,6 +795,13 @@ export class RandomTrader {
       OrderBook.ShareName,
       TraderInstance,
     );
+  }
+
+  serialize() {
+    return {
+      cashDeposit: this.cashDeposit,
+      assetInventory: this.assetInventory,
+    };
   }
 }
 
@@ -984,12 +1020,14 @@ export class Player {
     this.totalAssetValue = 0;
     this.all_OrderBooks = all_OrderBooks;
   }
-  getPlayerWorth(){
-    let playerworth = 0
-    for (const asset in this.assetInventory ){
-      playerworth+=this.assetInventory[asset].asset.Current_Market_SharePrice
+  getPlayerWorth() {
+    let playerworth = 0;
+    for (const asset in this.assetInventory) {
+      playerworth +=
+        this.assetInventory[asset].assetQuntity *
+        this.assetInventory[asset].asset.Current_Market_SharePrice;
     }
-    return this.cashDeposit+playerworth;
+    return this.cashDeposit + playerworth;
   }
   placeOrder(
     OrderQuantity: number,
@@ -998,11 +1036,17 @@ export class Player {
     OrderPrice: number,
     OrderType: OrderType,
   ) {
-    if (OrderQuantity < 0) return;
-    // if(!this.assetInventory[`${OrderBook.ShareName}`]){
-    //   this.assetInventory[`${OrderBook.ShareName}`]
-    // }
-
+    if (OrderQuantity < 0 ) return;
+   
+    //trader can only trade when--- money>price || shares>0
+    if (OrderType === "Sell" && (!this.assetInventory[OrderBook.ShareName] || this.assetInventory[OrderBook.ShareName].assetQuntity < OrderQuantity)) {
+      console.log("insufficient error");
+      return;
+    }
+    if (OrderType === "Buy" && this.cashDeposit < OrderQuantity * OrderBook.Current_Market_SharePrice) {
+      return;
+    }
+    
     return OrderBook.place_Order(
       OrderType,
       OrderPrice,

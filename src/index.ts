@@ -12,99 +12,97 @@ import {
 } from "./main";
 
 // ============================================================
-// Canvas Setup
-// ============================================================
-
-function initCanvas(id: string): {
-  el: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
-} {
-  const el = document.getElementById(id) as HTMLCanvasElement;
-  if (!el) throw new Error(`Canvas #${id} not found`);
-  const ctx = el.getContext("2d");
-  if (!ctx) throw new Error(`Canvas #${id} context missing`);
-  return { el, ctx };
-}
-
-const { el: tradeCanvas, ctx } = initCanvas("monkey_trade");
-const { el: priceCanvas, ctx: priceCtx } = initCanvas("price-axis");
-
-tradeCanvas.width = window.innerWidth;
-tradeCanvas.height = window.innerHeight;
-priceCanvas.width = 200;
-priceCanvas.height = window.innerHeight;
-
-// ============================================================
-// Price Axis
-// ============================================================
-function renderPriceAxis() {
-  const h = priceCanvas.height;
-  priceCtx.clearRect(0, 0, priceCanvas.width, h);
-  priceCtx.setTransform(1, 0, 0, 1, 0, 0);
-  priceCtx.font = "24px monospace";
-  priceCtx.fillStyle = "rgba(255,255,255,0.6)";
-  priceCtx.textAlign = "left";
-  priceCtx.textBaseline = "middle";
-
-  for (let i = 0; i < h; i += 100) {
-    const y = h - i;
-    priceCtx.fillStyle = "rgba(255,255,255,0.15)";
-    priceCtx.fillRect(0, y, priceCanvas.width - 90, 1);
-    priceCtx.fillStyle = "rgba(255,255,255,0.6)";
-    priceCtx.fillText(i.toString(), 105, y);
-  }
-}
-
-renderPriceAxis();
-
-// ============================================================
 // Market Entities
 // ============================================================
+const saved = localStorage.getItem("banana");
+let Bananajs: OrderBook;
+let firstOrderBookName = "Bananajs";
 const STARTING_PRICE = 500;
-const firstOrderBookName = "Bananajs";
-const orderBook = new OrderBook(firstOrderBookName, STARTING_PRICE);
-const All_OrderBook = { [firstOrderBookName]: orderBook };
-
+if (saved) {
+  const snapshot = JSON.parse(saved);
+  // Reconstruct from saved data instead of hardcoded defaults
+  Bananajs = OrderBook.fromJSON(snapshot);
+  firstOrderBookName = Bananajs.ShareName;
+}
+else {
+  Bananajs = new OrderBook(firstOrderBookName, STARTING_PRICE);
+}
+const All_OrderBook = { [firstOrderBookName]: Bananajs };
+//Bot Traders
 const randomTrader = new RandomTrader(
-  { [firstOrderBookName]: { asset: orderBook, assetQuntity: 1000 } },
+  { [firstOrderBookName]: { asset: Bananajs, assetQuntity: 1000 } },
   1000,
   All_OrderBook,
 );
 const trendFollower = new TrendFollower(
-  { [firstOrderBookName]: { asset: orderBook, assetQuntity: 1000 } },
+  { [firstOrderBookName]: { asset: Bananajs, assetQuntity: 1000 } },
   1000,
   All_OrderBook,
 );
 const marketCorrectionTrader = new MarketCorrectionTrader(
-  { [firstOrderBookName]: { asset: orderBook, assetQuntity: 1000 } },
+  { [firstOrderBookName]: { asset: Bananajs, assetQuntity: 1000 } },
   1000,
   All_OrderBook,
 );
 const marketMaker = new MarketMaker(
-  { [firstOrderBookName]: { asset: orderBook, assetQuntity: 1000 } },
+  { [firstOrderBookName]: { asset: Bananajs, assetQuntity: 1000 } },
   100_000,
   All_OrderBook,
 );
 
+// ===================================================
+// Experimenting with player (Not the final verson But JUGAAD version)
+// ===================================================
 export const player = new Player({}, 2000, All_OrderBook);
+const buybtn = document.getElementById("buy-btn");
+const sellbtn = document.getElementById("sell-btn");
+
+if (buybtn != null && sellbtn != null) {
+  buybtn.onclick = () => {
+    player.placeOrder(
+      1,
+      player,
+      All_OrderBook[firstOrderBookName],
+      All_OrderBook[firstOrderBookName].Current_Market_SharePrice,
+      "Buy",
+    );
+    console.log("player order placed");
+    console.log(player.assetInventory);
+  };
+  sellbtn.onclick = () => {
+    player.placeOrder(
+      1,
+      player,
+      All_OrderBook[firstOrderBookName],
+      All_OrderBook[firstOrderBookName].Current_Market_SharePrice,
+      "Sell",
+    );
+    console.log("player order placed");
+    console.log(player.assetInventory);
+
+  };
+}
 
 function updatePlayerBal() {
   let playerBal = document.getElementById("hud-balance");
   let playerWorth = document.getElementById("hud-worth");
+  let profit_loss = document.getElementById("hud-pnl");
   const balance = player.cashDeposit;
   const monetryAsset = player.getPlayerWorth();
-  if (playerBal && playerWorth) {
+  if (playerBal && playerWorth && profit_loss) {
     playerBal.textContent = `$${balance.toFixed(2)}`;
     playerWorth.textContent = `$${monetryAsset.toFixed(2)}`;
+    profit_loss.innerText = `$${monetryAsset-2000}`;
+    profit_loss.style.color = (monetryAsset-2000)>0?'green':'red';
   }
 }
 
 // ============================================================
-// Event System
+// Event System  (Has not yet implemented completely- workiing on it)
 // ============================================================
 
 const eventSystem = new EventSystem();
-const affected_Markets = [orderBook];
+const affected_Markets = [Bananajs];
 
 const all_availableEvents: Record<eventType, Event[]> = {
   Bullish: [
@@ -265,15 +263,15 @@ function maybeFireEvents() {
 function tickTraders(sentiment: number) {
   // const abs = Math.abs(sentiment);
   const abs = 0;
-  randomTrader.placeOrder(10, randomTrader, sentiment, orderBook);
-  trendFollower.placeOrder(10, trendFollower, sentiment, orderBook);
+  randomTrader.placeOrder(3, randomTrader, sentiment, Bananajs);
+  trendFollower.placeOrder(10, trendFollower, sentiment, Bananajs);
   marketCorrectionTrader.placeOrder(
     marketCorrectionTrader,
     sentiment,
-    orderBook,
+    Bananajs,
   );
+  // marketMaker.placeOrder(1,marketMaker,sentiment,Bananajs)
 
-  console.log(player.assetInventory);
   // marketMaker.placeOrder(1, marketMaker, sentiment);
 
   // Random traders flood market during panic/hype (1x → 5x)
@@ -297,6 +295,52 @@ function tickTraders(sentiment: number) {
   // Market maker always runs — but spread widens with sentiment (handled inside)
   // marketMaker.placeOrder(5, marketMaker, sentiment);
 }
+
+// ============================================================
+// Canvas Setup
+// ============================================================
+
+function initCanvas(id: string): {
+  el: HTMLCanvasElement;
+  ctx: CanvasRenderingContext2D;
+} {
+  const el = document.getElementById(id) as HTMLCanvasElement;
+  if (!el) throw new Error(`Canvas #${id} not found`);
+  const ctx = el.getContext("2d");
+  if (!ctx) throw new Error(`Canvas #${id} context missing`);
+  return { el, ctx };
+}
+
+const { el: tradeCanvas, ctx } = initCanvas("monkey_trade");
+const { el: priceCanvas, ctx: priceCtx } = initCanvas("price-axis");
+
+tradeCanvas.width = window.innerWidth;
+tradeCanvas.height = window.innerHeight;
+priceCanvas.width = 200;
+priceCanvas.height = window.innerHeight;
+
+// ============================================================
+// Price Axis
+// ============================================================
+function renderPriceAxis() {
+  const h = priceCanvas.height;
+  priceCtx.clearRect(0, 0, priceCanvas.width, h);
+  priceCtx.setTransform(1, 0, 0, 1, 0, 0);
+  priceCtx.font = "24px monospace";
+  priceCtx.fillStyle = "rgba(255,255,255,0.6)";
+  priceCtx.textAlign = "left";
+  priceCtx.textBaseline = "middle";
+
+  for (let i = 0; i < h; i += 100) {
+    const y = h - i;
+    priceCtx.fillStyle = "rgba(255,255,255,0.15)";
+    priceCtx.fillRect(0, y, priceCanvas.width - 90, 1);
+    priceCtx.fillStyle = "rgba(255,255,255,0.6)";
+    priceCtx.fillText(i.toString(), 105, y);
+  }
+}
+
+renderPriceAxis();
 
 // ============================================================
 // Order Book UI
@@ -396,7 +440,7 @@ function gameLoop() {
 
   // 4. Update price display
   tick++;
-  const price = orderBook.Current_Market_SharePrice;
+  const price = Bananajs.Current_Market_SharePrice;
   const priceBtn = document.getElementById("price-btn");
   if (priceBtn) priceBtn.innerText = price.toFixed(2);
 
@@ -413,7 +457,6 @@ function gameLoop() {
     // 0. Player Balance update
     updatePlayerBal();
 
-
     const committed = new Candle(ctx, candleX, priceBefore, price);
     candles.push(committed);
     candleX += CANDLE_WIDTH;
@@ -422,20 +465,23 @@ function gameLoop() {
     if (candleX > tradeCanvas.width / 2) {
       cameraOffset -= CANDLE_WIDTH;
     }
-
   }
   renderOrderBook(
-    orderBook.orderBookRecords().top20BuyOrders,
-    orderBook.orderBookRecords().top20SellOrders,
+    Bananajs.orderBookRecords().top20BuyOrders,
+    Bananajs.orderBookRecords().top20SellOrders,
   );
   redrawCandles();
 
   // 7. Redraw all committed candles
 
   // 8. Stop after canvas fills up
-  if (tick > 1.5 * window.innerWidth) {
-    clearInterval(loop);
-  }
+  // if (tick > 3.5 * window.innerWidth) {
+  //   const banana = Bananajs.toJSON();
+  //   // Save — feels like storing the whole thing
+  //   localStorage.setItem("banana", JSON.stringify(banana));
+
+  //   clearInterval(loop);
+  // }
 }
 
 const loop = setInterval(gameLoop, 10);
