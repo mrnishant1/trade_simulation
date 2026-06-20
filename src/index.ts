@@ -23,12 +23,14 @@ if (saved) {
   // Reconstruct from saved data instead of hardcoded defaults
   Bananajs = OrderBook.fromJSON(snapshot);
   firstOrderBookName = Bananajs.ShareName;
-}
-else {
+} else {
   Bananajs = new OrderBook(firstOrderBookName, STARTING_PRICE);
 }
 const All_OrderBook = { [firstOrderBookName]: Bananajs };
-//Bot Traders
+
+
+
+//==============================Bot Trader instantiate=========================================
 const randomTrader = new RandomTrader(
   { [firstOrderBookName]: { asset: Bananajs, assetQuntity: 1000 } },
   1000,
@@ -50,10 +52,11 @@ const marketCorrectionTrader = new MarketCorrectionTrader(
 //   All_OrderBook,
 // );
 
-
 // ===================================================
 // Experimenting with player (Not the final verson But JUGAAD version)
 // ===================================================
+
+//==============================Player =========================================
 export const player = new Player({}, 2000, All_OrderBook);
 const buybtn = document.getElementById("buy-btn");
 const sellbtn = document.getElementById("sell-btn");
@@ -80,7 +83,6 @@ if (buybtn != null && sellbtn != null) {
     );
     console.log("player order placed");
     console.log(player.assetInventory);
-
   };
 }
 
@@ -93,9 +95,21 @@ function updatePlayerBal() {
   if (playerBal && playerWorth && profit_loss) {
     playerBal.textContent = `$${balance.toFixed(2)}`;
     playerWorth.textContent = `$${monetryAsset.toFixed(2)}`;
-    profit_loss.innerText = `$${monetryAsset-2000}`;
-    profit_loss.style.color = (monetryAsset-2000)>0?'green':'red';
+    profit_loss.innerText = `$${monetryAsset - 2000}`;
+    profit_loss.style.color = monetryAsset - 2000 > 0 ? "green" : "red";
   }
+}
+function tickTraders(sentiment: number) {
+  // const abs = Math.abs(sentiment);
+  // const abs = 0;
+  randomTrader.placeOrder(3, randomTrader, sentiment, Bananajs);
+  trendFollower.placeOrder(10, trendFollower, sentiment, Bananajs);
+  marketCorrectionTrader.placeOrder(
+    marketCorrectionTrader,
+    sentiment,
+    Bananajs,
+  );
+
 }
 
 // ============================================================
@@ -261,41 +275,6 @@ function updatePlayerBal() {
 // Trader Firing — sentiment-scaled
 // ============================================================
 
-function tickTraders(sentiment: number) {
-  // const abs = Math.abs(sentiment);
-  // const abs = 0;
-  randomTrader.placeOrder(3, randomTrader, sentiment, Bananajs);
-  trendFollower.placeOrder(10, trendFollower, sentiment, Bananajs);
-  marketCorrectionTrader.placeOrder(
-    marketCorrectionTrader,
-    sentiment,
-    Bananajs,
-  );
-  // marketMaker.placeOrder(1,marketMaker,sentiment,Bananajs)
-
-  // marketMaker.placeOrder(1, marketMaker, sentiment);
-
-  // Random traders flood market during panic/hype (1x → 5x)
-  // const randomBurst = Math.max(1, Math.round(1 + abs * 4));
-  // for (let i = 0; i < randomBurst; i++) {
-  //   randomTrader.placeOrder(1, randomTrader, sentiment);
-  // }
-
-  // // Trend followers activate more when signal is clear
-  // const trendProb = 0.3 + abs * 0.5;
-  // if (Math.random() < trendProb) {
-  //   trendFollower.placeOrder(1, trendFollower, sentiment);
-  // }
-
-  // // Correction traders suppressed during strong sentiment
-  // const correctionProb = abs > 0.5 ? 0.15 : 0.6;
-  // if (Math.random() < correctionProb) {
-  //   marketCorrectionTrader.placeOrder(marketCorrectionTrader, sentiment);
-  // }
-
-  // Market maker always runs — but spread widens with sentiment (handled inside)
-  // marketMaker.placeOrder(5, marketMaker, sentiment);
-}
 
 // ============================================================
 // Canvas Setup
@@ -436,7 +415,7 @@ function gameLoop() {
 
   // 3. Get current sentiment and fire traders
   // const sentiment = eventSystem.getMarketSentiment();
-  const sentiment = 0
+  const sentiment = 0;
   tickTraders(sentiment);
 
   // 4. Update price display
@@ -486,7 +465,7 @@ function gameLoop() {
 }
 
 // const loop = setInterval(gameLoop, 10);
- setInterval(gameLoop, 10);
+setInterval(gameLoop, 10);
 
 // ============================================================
 // Drag to Scroll

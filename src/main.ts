@@ -1122,8 +1122,17 @@ export type eventType =
   | "TREND_BOOST"
   | "TREND_EXHAUSTION";
 
+
 export class EventSystem {
   active_Events: Event[] = [];
+  constructor(){
+    this.active_Events = [];
+  }
+
+  envokeEventWith_0_weight(){
+    
+  }
+  
 
   addEvent(event: Event) {
     this.active_Events.push(event);

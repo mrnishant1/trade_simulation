@@ -1,5 +1,5 @@
 // ── GLOBAL STATE ─────────────────────────────────────────────
-export const GameState = {
+export const GLOBALGameState = {
   // Player
   player: {
     cashDeposite: 1000,
@@ -32,34 +32,7 @@ export const GameState = {
   },
 
   // Agentic assets — AI/NPC traders acting independently
-  agents: [
-    {
-      id: "whale_01",
-      name: "The Whale",
-      cash: 50000,
-      holdings: {},
-      strategy: "momentum",
-    },
-    {
-      id: "bot_02",
-      name: "ScalpBot",
-      cash: 5000,
-      holdings: {},
-      strategy: "scalp",
-    },
-    {
-      id: "fund_03",
-      name: "HedgeFund",
-      cash: 80000,
-      holdings: {},
-      strategy: "contrarian",
-    },
-  ],
-
+  
   // World
-  day: 1,
-  maxDays: 30,
-  targetAmount: 10000,
-  scene: "house", // 'house' | 'city'
-  phase: "playing", // 'playing' | 'paused' | 'won' | 'lost'
+  
 };
