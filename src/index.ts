@@ -1,5 +1,6 @@
 import {
   Candle,
+  Order,
   OrderBook,
   RandomTrader,
   TrendFollower,
@@ -61,32 +62,153 @@ const marketCorrectionTrader = new MarketCorrectionTrader(
 export const player = new Player({}, 2000, All_OrderBook);
 const buybtn = document.getElementById("buy-btn");
 const sellbtn = document.getElementById("sell-btn");
+const orderDialog = document.getElementById("order-dialog");
+const orderDialogTitle = document.getElementById("order-dialog-title");
+const orderQtyInput = document.getElementById("order-qty-input") as HTMLInputElement | null;
+const orderPriceInput = document.getElementById("order-price-input") as HTMLInputElement | null;
+const orderHelperText = document.getElementById("order-helper-text");
+const orderSubmitButton = document.getElementById("order-submit-button");
+const orderCancelButton = document.getElementById("order-cancel-button");
+const orderDialogCloseButton = document.getElementById("order-dialog-close");
+
+type PlayerOrderType = "Buy" | "Sell";
+
+let activePlayerOrder: Order | null = null;
+let orderDialogType: PlayerOrderType | null = null;
+
+function getPlayerHolding() {
+  return player.assetInventory[firstOrderBookName]?.assetQuntity ?? 0;
+}
+
+function playerHasOrderInBook(order: Order) {
+  const book = All_OrderBook[firstOrderBookName];
+  const map = order.OrderType === "Buy"
+    ? book.BuyOrders_Heap.All_BuyOrders_Map
+    : book.SellOrders_Heap.All_SellOrders_Map;
+
+  for (const list of map.priceMap.values()) {
+    let node = list.head;
+    while (node) {
+      if (node.Order.OrderID === order.OrderID) return true;
+      node = node.Next;
+    }
+  }
+
+  return false;
+}
+
+function openOrderDialog(orderType: PlayerOrderType) {
+  if (!orderDialog || !orderDialogTitle || !orderQtyInput || !orderPriceInput || !orderHelperText || !orderSubmitButton) return;
+
+  const currentPrice = All_OrderBook[firstOrderBookName].Current_Market_SharePrice;
+  const holding = getPlayerHolding();
+  const maxAffordable = Math.floor(player.cashDeposit / currentPrice);
+
+  if (orderType === "Sell" && holding <= 0) {
+    alert("No BANANA available to sell.");
+    return;
+  }
+  if (orderType === "Buy" && maxAffordable <= 0) {
+    alert("Not enough cash to buy BANANA.");
+    return;
+  }
+
+  orderDialogType = orderType;
+  orderDialogTitle.textContent = `${orderType} BANANA`;
+  orderQtyInput.value = "1";
+  orderPriceInput.value = currentPrice.toFixed(2);
+  orderHelperText.textContent = orderType === "Sell"
+    ? `Max sell quantity: ${holding} BANANA.`
+    : `Max buy quantity: ${maxAffordable} BANANA at current market price.`;
+  orderSubmitButton.textContent = `${orderType} ORDER`;
+  orderDialog.classList.add("visible");
+}
+
+function closeOrderDialog() {
+  if (!orderDialog) return;
+  orderDialog.classList.remove("visible");
+  orderDialogType = null;
+}
+
+function submitOrderFromDialog() {
+  if (!orderDialogType || !orderQtyInput || !orderPriceInput) return;
+
+  const quantity = Math.floor(Number(orderQtyInput.value));
+  const price = Number(orderPriceInput.value);
+
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    alert("Please enter a valid quantity.");
+    return;
+  }
+  if (!Number.isFinite(price) || price <= 0) {
+    alert("Please enter a valid price.");
+    return;
+  }
+
+  if (orderDialogType === "Sell") {
+    const holding = getPlayerHolding();
+    if (holding <= 0) {
+      alert("You have no BANANA to sell.");
+      return;
+    }
+    if (quantity > holding) {
+      alert(`You can only sell up to ${holding} BANANA.`);
+      return;
+    }
+  }
+
+  if (orderDialogType === "Buy") {
+    const maxAffordable = Math.floor(player.cashDeposit / price);
+    if (maxAffordable <= 0) {
+      alert("Not enough cash to buy any BANANA at that price.");
+      return;
+    }
+    if (quantity > maxAffordable) {
+      alert(`You can only buy up to ${maxAffordable} BANANA at this price.`);
+      return;
+    }
+  }
+
+  placePlayerOrder(orderDialogType, quantity, price);
+  closeOrderDialog();
+}
+
+function placePlayerOrder(orderType: PlayerOrderType, quantity: number, price: number) {
+  const order = player.placeOrder(
+    quantity,
+    player,
+    All_OrderBook[firstOrderBookName],
+    price,
+    orderType,
+  );
+  if (!order) {
+    if (orderType === "Sell") {
+      alert("Order failed: insufficient BANANA holdings.");
+    } else {
+      alert("Order failed: insufficient cash.");
+    }
+    return;
+  }
+
+  activePlayerOrder = order.Quantity > 0 ? order : null;
+  console.log("player order placed", order);
+  console.log(player.assetInventory);
+  syncGlobalState();
+}
 
 if (buybtn != null && sellbtn != null) {
-  buybtn.onclick = () => {
-    player.placeOrder(
-      1,
-      player,
-      All_OrderBook[firstOrderBookName],
-      All_OrderBook[firstOrderBookName].Current_Market_SharePrice,
-      "Buy",
-    );
-    console.log("player order placed");
-    console.log(player.assetInventory);
-    syncGlobalState();
-  };
-  sellbtn.onclick = () => {
-    player.placeOrder(
-      1,
-      player,
-      All_OrderBook[firstOrderBookName],
-      All_OrderBook[firstOrderBookName].Current_Market_SharePrice,
-      "Sell",
-    );
-    console.log("player order placed");
-    console.log(player.assetInventory);
-    syncGlobalState();
-  };
+  buybtn.onclick = () => openOrderDialog("Buy");
+  sellbtn.onclick = () => openOrderDialog("Sell");
+}
+
+if (orderCancelButton) {
+  orderCancelButton.onclick = closeOrderDialog;
+}
+if (orderDialogCloseButton) {
+  orderDialogCloseButton.onclick = closeOrderDialog;
+}
+if (orderSubmitButton) {
+  orderSubmitButton.onclick = submitOrderFromDialog;
 }
 
 function updatePlayerBal() {
@@ -165,6 +287,18 @@ function renderOrderbookSummary() {
   }
 }
 
+function renderPlayerActiveOrder() {
+  const statusEl = document.getElementById("player-order-text");
+  if (!statusEl) return;
+
+  if (activePlayerOrder && playerHasOrderInBook(activePlayerOrder)) {
+    statusEl.textContent = `${activePlayerOrder.OrderType} ${activePlayerOrder.Quantity} BANANA @ $${activePlayerOrder.AtPrice.toFixed(2)} (pending)`;
+  } else {
+    activePlayerOrder = null;
+    statusEl.textContent = "No active unsettled order";
+  }
+}
+
 function captureOrderSnapshot(orderBook: OrderBook) {
   const buyEntry = orderBook.BuyOrders_Heap.peak()?.Order;
   const sellEntry = orderBook.SellOrders_Heap.peak()?.Order;
@@ -196,6 +330,7 @@ function syncGlobalState() {
   GLOBALGameState.orderbooks = Object.values(All_OrderBook).map(captureOrderSnapshot);
   renderPlayerAssets();
   renderOrderbookSummary();
+  renderPlayerActiveOrder();
   updatePlayerBal();
 }
 
@@ -481,15 +616,31 @@ function applyTransform(offset = cameraOffset) {
   ctx.scale(1, -1);
 }
 
-function redrawCandles() {
-  // ctx.setTransform(1, 0, 0, 1, 0, 0);
-  // ctx.clearRect(0, 0, tradeCanvas.width, tradeCanvas.height);
-  // applyTransform();
+function drawPlayerOrderLine() {
+  if (!activePlayerOrder) return;
+  if (!playerHasOrderInBook(activePlayerOrder)) {
+    activePlayerOrder = null;
+    return;
+  }
 
+  const lineY = activePlayerOrder.AtPrice;
+  ctx.save();
+  ctx.beginPath();
+  ctx.strokeStyle = activePlayerOrder.OrderType === "Buy" ? "rgba(0,255,0,0.65)" : "rgba(255,0,0,0.65)";
+  ctx.lineWidth = 2;
+  ctx.moveTo(0, lineY);
+  ctx.lineTo(tradeCanvas.width, lineY);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function redrawCandles() {
   const start = Math.max(0, candles.length - 100);
+  drawPlayerOrderLine();
+
   for (let i = start; i < candles.length; i++) {
     candles[i].draw();
-    //Line follwing price candles-------------
+    // Line following price candles
     if (i > start) {
       const prev = candles[i - 1];
       const curr = candles[i];
