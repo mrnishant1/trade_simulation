@@ -1010,6 +1010,8 @@ export class Player {
   totalAssetValue: number;
   all_OrderBooks: Record<string, OrderBook>;
   cashDeposit: number;
+  xp: number;
+  streak: number;
   constructor(
     assetInventory: Record<string, asset>,
     cashDeposit: number,
@@ -1019,6 +1021,8 @@ export class Player {
     this.assetInventory = assetInventory; //The different assets player going to have
     this.totalAssetValue = 0;
     this.all_OrderBooks = all_OrderBooks;
+    this.xp = 0;
+    this.streak = 0;
   }
   getPlayerWorth() {
     let playerworth = 0;
@@ -1028,6 +1032,34 @@ export class Player {
         this.assetInventory[asset].asset.Current_Market_SharePrice;
     }
     return this.cashDeposit + playerworth;
+  }
+  updatePlayerState(globalState: { player?: any }) {
+    const assets: Record<string, { quantity: number; marketPrice: number; marketValue: number }> = {};
+    let assetValue = 0;
+
+    for (const symbol in this.assetInventory) {
+      const state = this.assetInventory[symbol];
+      const price = state.asset?.Current_Market_SharePrice ?? 0;
+      const marketValue = Number((state.assetQuntity * price).toFixed(2));
+      assetValue += marketValue;
+      assets[symbol] = {
+        quantity: state.assetQuntity,
+        marketPrice: Number(price.toFixed(2)),
+        marketValue,
+      };
+    }
+
+    const netWorth = Number((this.cashDeposit + assetValue).toFixed(2));
+    globalState.player = {
+      cashDeposit: this.cashDeposit,
+      xp: this.xp,
+      streak: this.streak,
+      netWorth,
+      assets,
+      lastUpdated: Date.now(),
+    };
+
+    return globalState.player;
   }
   placeOrder(
     OrderQuantity: number,

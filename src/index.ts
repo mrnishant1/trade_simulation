@@ -10,6 +10,7 @@ import {
   // EventSystem,
   Player,
 } from "./main";
+import { GLOBALGameState } from "./globalstate";
 
 // ============================================================
 // Market Entities
@@ -72,6 +73,7 @@ if (buybtn != null && sellbtn != null) {
     );
     console.log("player order placed");
     console.log(player.assetInventory);
+    syncGlobalState();
   };
   sellbtn.onclick = () => {
     player.placeOrder(
@@ -83,6 +85,7 @@ if (buybtn != null && sellbtn != null) {
     );
     console.log("player order placed");
     console.log(player.assetInventory);
+    syncGlobalState();
   };
 }
 
@@ -95,10 +98,110 @@ function updatePlayerBal() {
   if (playerBal && playerWorth && profit_loss) {
     playerBal.textContent = `$${balance.toFixed(2)}`;
     playerWorth.textContent = `$${monetryAsset.toFixed(2)}`;
-    profit_loss.innerText = `$${monetryAsset - 2000}`;
+    profit_loss.innerText = `$${(monetryAsset - 2000).toFixed(2)}`;
     profit_loss.style.color = monetryAsset - 2000 > 0 ? "green" : "red";
   }
 }
+
+function renderPlayerAssets() {
+  const list = document.getElementById("player-assets-list");
+  const preview = document.getElementById("player-assets-preview");
+  const state = GLOBALGameState.player;
+
+  const makeAssetHtml = (symbol: string, asset: { quantity: number; marketPrice: number; marketValue: number }) => {
+    return `
+      <div class="asset-item">
+        <div class="asset-symbol">${symbol}</div>
+        <div class="asset-details">
+          <div>${asset.quantity} units</div>
+          <div>${asset.marketPrice.toFixed(2)} USD</div>
+        </div>
+        <div class="asset-value">$${asset.marketValue.toFixed(2)}</div>
+      </div>
+    `;
+  };
+
+  if (list) {
+    const entries = Object.entries(state.assets);
+    list.innerHTML = entries.length
+      ? entries.map(([symbol, asset]) => makeAssetHtml(symbol, asset)).join("")
+      : `<div class="asset-empty">No assets held yet</div>`;
+  }
+
+  if (preview) {
+    const assetCount = Object.keys(state.assets).length;
+    const totalAssets = Object.values(state.assets).reduce((sum, asset) => sum + asset.marketValue, 0);
+    preview.innerHTML = `
+      <div class="asset-preview-row"><span>Cash</span><strong>$${state.cashDeposit.toFixed(2)}</strong></div>
+      <div class="asset-preview-row"><span>Holdings</span><strong>$${totalAssets.toFixed(2)}</strong></div>
+      <div class="asset-preview-row"><span>Net Worth</span><strong>$${state.netWorth.toFixed(2)}</strong></div>
+      <div class="asset-preview-row"><span>Assets</span><strong>${assetCount}</strong></div>
+    `;
+  }
+}
+
+function renderOrderbookSummary() {
+  const marketPrice = document.getElementById("market-price");
+  const lastBuy = document.getElementById("last-buy");
+  const lastSell = document.getElementById("last-sell");
+  const priceBtn = document.getElementById("price-btn");
+  const summary = GLOBALGameState.orderbooks[0];
+
+  if (priceBtn && summary) {
+    priceBtn.textContent = `$${summary.marketPrice.toFixed(2)}`;
+  }
+  if (marketPrice && summary) {
+    marketPrice.textContent = `$${summary.marketPrice.toFixed(2)}`;
+  }
+  if (lastBuy) {
+    lastBuy.textContent = summary.lastBuyOrder
+      ? `${summary.lastBuyOrder.quantity} @ $${summary.lastBuyOrder.price.toFixed(2)}`
+      : "—";
+  }
+  if (lastSell) {
+    lastSell.textContent = summary.lastSellOrder
+      ? `${summary.lastSellOrder.quantity} @ $${summary.lastSellOrder.price.toFixed(2)}`
+      : "—";
+  }
+}
+
+function captureOrderSnapshot(orderBook: OrderBook) {
+  const buyEntry = orderBook.BuyOrders_Heap.peak()?.Order;
+  const sellEntry = orderBook.SellOrders_Heap.peak()?.Order;
+
+  return {
+    orderBookName: orderBook.ShareName,
+    marketPrice: orderBook.Current_Market_SharePrice,
+    lastBuyOrder: buyEntry
+      ? {
+          price: buyEntry.AtPrice,
+          quantity: buyEntry.Quantity,
+          time: buyEntry.time,
+          trader: buyEntry.Order_PlacedBy.constructor.name,
+        }
+      : null,
+    lastSellOrder: sellEntry
+      ? {
+          price: sellEntry.AtPrice,
+          quantity: sellEntry.Quantity,
+          time: sellEntry.time,
+          trader: sellEntry.Order_PlacedBy.constructor.name,
+        }
+      : null,
+  };
+}
+
+function syncGlobalState() {
+  player.updatePlayerState(GLOBALGameState);
+  GLOBALGameState.orderbooks = Object.values(All_OrderBook).map(captureOrderSnapshot);
+  renderPlayerAssets();
+  renderOrderbookSummary();
+  updatePlayerBal();
+}
+
+setInterval(syncGlobalState, 5000);
+syncGlobalState();
+
 function tickTraders(sentiment: number) {
   // const abs = Math.abs(sentiment);
   // const abs = 0;

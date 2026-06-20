@@ -90,42 +90,6 @@
         <div class="side"><div style="height: 100%;" id="buyOrders"></div></div>
         <div class="side"><div style="height: 100%;" id="sellOrders"></div></div>
       </div>
-
-      <!-- Quest panel -->
-      <div class="quest-panel">
-        <div class="quest-title">⚔ Daily Quests</div>
-
-        <div class="quest-item">
-          <div class="quest-icon" style="background:rgba(56,189,248,0.1)">📈</div>
-          <div class="quest-text">
-            <div class="quest-name">Trade 5x</div>
-            <div class="quest-bar-track"><div class="quest-bar-fill" style="width:60%;background:var(--accent-blue)"></div></div>
-            <div class="quest-prog">3 / 5</div>
-          </div>
-          <div class="quest-xp">+50 XP</div>
-        </div>
-
-        <div class="quest-item">
-          <div class="quest-icon" style="background:rgba(0,255,163,0.1)">💰</div>
-          <div class="quest-text">
-            <div class="quest-name">Profit $20</div>
-            <div class="quest-bar-track"><div class="quest-bar-fill" style="width:100%;background:var(--accent-green)"></div></div>
-            <div class="quest-prog" style="color:var(--accent-green)">COMPLETE ✓</div>
-          </div>
-          <div class="quest-xp" style="color:var(--accent-green)">+30 XP</div>
-        </div>
-
-        <div class="quest-item">
-          <div class="quest-icon" style="background:rgba(168,85,247,0.1)">🎯</div>
-          <div class="quest-text">
-            <div class="quest-name">3 Win Streak</div>
-            <div class="quest-bar-track"><div class="quest-bar-fill" style="width:100%;background:var(--accent-purple)"></div></div>
-            <div class="quest-prog" style="color:var(--accent-purple)">COMPLETE ✓</div>
-          </div>
-          <div class="quest-xp" style="color:var(--accent-purple)">+80 XP</div>
-        </div>
-
-      </div>
     </div>
 
     <!-- ── CHART AREA ── -->
@@ -192,93 +156,18 @@
     <div class="right-panel">
 
       <div class="rp-section">
-        <div class="rp-title">📊 Session Stats</div>
-        <div class="stats-ring">
-          <div class="stat-ring-item">
-            <div class="ring-val" style="color:var(--accent-green)" id="stat-trades">0</div>
-            <div class="ring-label">Trades</div>
-          </div>
-          <div class="stat-ring-item">
-            <div class="ring-val" style="color:var(--accent-blue)" id="stat-wins">0</div>
-            <div class="ring-label">Wins</div>
-          </div>
-          <div class="stat-ring-item">
-            <div class="ring-val" style="color:var(--accent-red)" id="stat-losses">0</div>
-            <div class="ring-label">Losses</div>
-          </div>
+        <div class="rp-title">� Player Assets</div>
+        <div id="player-assets-list" class="asset-list">
+          <div class="asset-empty">No assets held yet</div>
         </div>
       </div>
 
       <div class="rp-section">
-        <div class="rp-title">🏆 Achievements</div>
-
-        <div class="achievement unlocked">
-          <div class="ach-icon">🥇</div>
-          <div class="ach-info">
-            <div class="ach-name">First Blood</div>
-            <div class="ach-desc">First profitable trade</div>
-          </div>
-        </div>
-
-        <div class="achievement unlocked">
-          <div class="ach-icon">🔥</div>
-          <div class="ach-info">
-            <div class="ach-name">On Fire</div>
-            <div class="ach-desc">3 win streak</div>
-          </div>
-        </div>
-
-        <div class="achievement">
-          <div class="ach-icon" style="opacity:0.3">💎</div>
-          <div class="ach-info">
-            <div class="ach-name" style="color:var(--text-dim)">Diamond Hands</div>
-            <div class="ach-desc">Hold for 1hr</div>
-          </div>
-        </div>
-
-        <div class="achievement">
-          <div class="ach-icon" style="opacity:0.3">🚀</div>
-          <div class="ach-info">
-            <div class="ach-name" style="color:var(--text-dim)">Moon Shot</div>
-            <div class="ach-desc">+$500 in a day</div>
-          </div>
-        </div>
-
-      </div>
-
-      <div class="rp-section">
-        <div class="rp-title">🏅 Leaderboard</div>
-
-        <div class="lb-row">
-          <div class="lb-rank gold">1</div>
-          <div class="lb-avatar">🦁</div>
-          <div class="lb-name">KingTrade</div>
-          <div class="lb-pnl">+$842</div>
-        </div>
-        <div class="lb-row">
-          <div class="lb-rank silver">2</div>
-          <div class="lb-avatar" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">🐺</div>
-          <div class="lb-name">WolfPack</div>
-          <div class="lb-pnl">+$621</div>
-        </div>
-        <div class="lb-row">
-          <div class="lb-rank bronze">3</div>
-          <div class="lb-avatar" style="background:linear-gradient(135deg,#10b981,#3b82f6)">🦅</div>
-          <div class="lb-name">EagleEye</div>
-          <div class="lb-pnl">+$480</div>
-        </div>
-        <div class="lb-row" style="background:rgba(0,255,163,0.05);border-radius:3px;padding:5px 4px;margin:2px 0;border:1px solid rgba(0,255,163,0.15)">
-          <div class="lb-rank" style="color:var(--accent-green)">7</div>
-          <div class="lb-avatar" style="background:linear-gradient(135deg,#00ffa3,#38bdf8)">👤</div>
-          <div class="lb-name you">You</div>
-          <div class="lb-pnl" id="lb-you-pnl">+$48</div>
-        </div>
-        <div class="lb-row">
-          <div class="lb-rank">8</div>
-          <div class="lb-avatar" style="background:linear-gradient(135deg,#6b7280,#374151)">🐻</div>
-          <div class="lb-name">BearTrap</div>
-          <div class="lb-pnl" style="color:var(--accent-red)">-$12</div>
-        </div>
+        <div class="rp-title">📈 Market Snapshot</div>
+        <div class="asset-summary-row"><span>Market Price</span><strong id="market-price">—</strong></div>
+        <div class="asset-summary-row"><span>Last Bid</span><strong id="last-buy">—</strong></div>
+        <div class="asset-summary-row"><span>Last Ask</span><strong id="last-sell">—</strong></div>
+        <div class="asset-summary-row"><span>Orderbooks</span><strong>1</strong></div>
       </div>
 
     </div>

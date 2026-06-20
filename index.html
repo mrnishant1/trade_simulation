@@ -86,6 +86,63 @@
       display: block;
     }
 
+    .music-overlay,
+    .asset-overlay {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      background: rgba(10, 14, 20, 0.85);
+      border: 1px solid rgba(200, 170, 80, 0.35);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: #ddd;
+      font-family: 'Courier New', monospace;
+      z-index: 20;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      max-width: 260px;
+      pointer-events: auto;
+    }
+
+    .music-overlay {
+      right: 18px;
+      bottom: 18px;
+    }
+
+    .asset-overlay {
+      right: 18px;
+      bottom: 120px;
+    }
+
+    .music-overlay h4,
+    .asset-overlay h4 {
+      font-size: 12px;
+      margin-bottom: 8px;
+      color: #f5c842;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .asset-preview-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .asset-preview-row strong {
+      color: #a8ffdb;
+    }
+
+    .music-overlay audio {
+      width: 100%;
+      outline: none;
+      margin-top: 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(245, 200, 66, 0.25);
+    }
+
     #dialog h3 {
       color: #c9a04a;
       font-size: 14px;
@@ -635,6 +692,21 @@
 
     })();
   </script>
+
+  <div class="asset-overlay" id="player-assets-preview">
+    <h4>Player Assets</h4>
+    <div class="asset-preview-row"><span>Cash</span><strong>$2,000.00</strong></div>
+    <div class="asset-preview-row"><span>Bananas</span><strong>0 units</strong></div>
+    <div class="asset-preview-row"><span>Net Worth</span><strong>$2,000.00</strong></div>
+  </div>
+
+  <!-- <div class="music-overlay">
+    <h4>Lofi Rain Ambience</h4>
+    <audio id="lofi-audio" controls loop preload="metadata">
+      <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+      Your browser does not support audio playback.
+    </audio>
+  </div> -->
 </body>
 
 </html>
